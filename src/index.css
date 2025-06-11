@@ -1,0 +1,400 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  user-select: none; /* Prevent text selection for desktop app feel */
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 142 76% 36%;
+    --primary-hover: 142 76% 32%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --secondary: 210 40% 98%;
+    --secondary-hover: 210 40% 94%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 98%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 98%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 142 76% 36%;
+    --chart-1: 142 76% 36%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.75rem;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --info: 199 89% 48%;
+  }
+  
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 142 76% 36%;
+    --primary-hover: 142 76% 32%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-hover: 217.2 32.6% 21.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 142 76% 36%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar for desktop app */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* Professional animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+  animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+/* Enhanced button styles for better visibility */
+.btn-primary {
+  @apply bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 border-0;
+}
+
+.btn-secondary {
+  @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 border-0;
+}
+
+.btn-warning {
+  @apply bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 border-0;
+}
+
+.btn-danger {
+  @apply bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 border-0;
+}
+
+.btn-success {
+  @apply bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 border-0;
+}
+
+.btn-info {
+  @apply bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 border-0;
+}
+
+/* Dark mode specific button improvements */
+.dark .btn-outline {
+  @apply border-slate-600 text-slate-200 hover:bg-slate-700 hover:text-white hover:border-slate-500;
+}
+
+.dark .btn-ghost {
+  @apply text-slate-200 hover:bg-slate-700 hover:text-white;
+}
+
+/* Enhanced visibility for dark mode */
+.dark .text-muted-foreground {
+  @apply text-slate-400;
+}
+
+.dark .border {
+  @apply border-slate-700;
+}
+
+.dark .bg-muted {
+  @apply bg-slate-800;
+}
+
+.dark .bg-card {
+  @apply bg-slate-900;
+}
+
+.dark .bg-popover {
+  @apply bg-slate-900;
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+}
+
+/* Professional gradients */
+.gradient-primary {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+/* Sri Lankan flag colors */
+.srilanka-orange {
+  background-color: #ff9500;
+}
+
+.srilanka-green {
+  background-color: #006a4e;
+}
+
+.srilanka-maroon {
+  background-color: #8b0000;
+}
+
+.srilanka-gold {
+  background-color: #ffd700;
+}
+
+/* Enhanced button visibility in dark mode */
+.dark button[data-state="open"] {
+  @apply bg-slate-700 text-white;
+}
+
+.dark .dropdown-menu-trigger {
+  @apply text-slate-200 hover:bg-slate-700 hover:text-white;
+}
+
+/* Improved contrast for icons and text in dark mode */
+.dark .lucide {
+  @apply text-slate-200;
+}
+
+.dark .text-foreground {
+  @apply text-slate-100;
+}
+
+/* Better visibility for navigation items */
+.dark .nav-item {
+  @apply text-slate-200 hover:text-white hover:bg-slate-700;
+}
+
+/* Enhanced form controls in dark mode */
+.dark input, .dark select, .dark textarea {
+  @apply bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-400;
+}
+
+.dark input:focus, .dark select:focus, .dark textarea:focus {
+  @apply border-green-500 ring-green-500/20;
+}
+
+/* Better table visibility in dark mode */
+.dark .table-row:hover {
+  @apply bg-slate-800;
+}
+
+.dark .table-header {
+  @apply bg-slate-800 text-slate-200;
+}
+
+/* Enhanced badge visibility */
+.dark .badge-outline {
+  @apply border-slate-600 text-slate-200;
+}
+
+.dark .badge-secondary {
+  @apply bg-slate-700 text-slate-200;
+}
+
+/* Improved dialog and modal visibility */
+.dark .dialog-content {
+  @apply bg-slate-900 border-slate-700;
+}
+
+.dark .dialog-header {
+  @apply text-slate-100;
+}
+
+/* Better separator visibility */
+.dark .separator {
+  @apply bg-slate-700;
+}
+
+/* Enhanced switch and checkbox visibility */
+.dark .switch-thumb {
+  @apply bg-slate-200;
+}
+
+.dark .checkbox {
+  @apply border-slate-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600;
+}
+
+/* Button states */
+button:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Focus states */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  @apply outline-none ring-2 ring-green-500/20;
+}
+
+/* Interactive elements */
+.interactive-hover {
+  @apply transition-all duration-200 hover:scale-105;
+}
+
+.interactive-active {
+  @apply transition-all duration-100 active:scale-95;
+}
+
+/* Status indicators */
+.status-dot {
+  @apply w-2 h-2 rounded-full;
+}
+
+.status-dot.online {
+  @apply bg-green-500;
+}
+
+.status-dot.offline {
+  @apply bg-red-500;
+}
+
+.status-dot.away {
+  @apply bg-yellow-500;
+}
+
+/* Loading states */
+.loading {
+  @apply animate-pulse;
+}
+
+/* Tooltips */
+.tooltip {
+  @apply bg-slate-900 text-white px-2 py-1 rounded text-sm;
+}
+
+.dark .tooltip {
+  @apply bg-slate-200 text-slate-900;
+}
