@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Users, Plus, Search, MoreHorizontal, Edit, 
   Trash2, Shield, Mail, AlertCircle, Key 
@@ -59,40 +59,40 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 // Mock users data
-const mockUsers = [
-  {
-    id: '1',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    role: 'admin',
-    status: 'active',
-    lastActive: '2024-04-18 14:30:00',
-  },
-  {
-    id: '2',
-    name: 'Sales Manager',
-    email: 'sales@example.com',
-    role: 'sales_manager',
-    status: 'active',
-    lastActive: '2024-04-18 13:45:00',
-  },
-  {
-    id: '3',
-    name: 'Cashier',
-    email: 'cashier@example.com',
-    role: 'cashier',
-    status: 'active',
-    lastActive: '2024-04-18 12:15:00',
-  },
-  {
-    id: '4',
-    name: 'Inventory Manager',
-    email: 'inventory@example.com',
-    role: 'inventory_manager',
-    status: 'inactive',
-    lastActive: '2024-04-17 16:20:00',
-  },
-];
+// const mockUsers = [
+//   {
+//     id: '1',
+//     name: 'Admin User',
+//     email: 'admin@example.com',
+//     role: 'admin',
+//     status: 'active',
+//     lastActive: '2024-04-18 14:30:00',
+//   },
+//   {
+//     id: '2',
+//     name: 'Sales Manager',
+//     email: 'sales@example.com',
+//     role: 'sales_manager',
+//     status: 'active',
+//     lastActive: '2024-04-18 13:45:00',
+//   },
+//   {
+//     id: '3',
+//     name: 'Cashier',
+//     email: 'cashier@example.com',
+//     role: 'cashier',
+//     status: 'active',
+//     lastActive: '2024-04-18 12:15:00',
+//   },
+//   {
+//     id: '4',
+//     name: 'Inventory Manager',
+//     email: 'inventory@example.com',
+//     role: 'inventory_manager',
+//     status: 'inactive',
+//     lastActive: '2024-04-17 16:20:00',
+//   },
+// ];
 
 const userFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -104,13 +104,26 @@ const userFormSchema = z.object({
 });
 
 const UsersPage = () => {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<any[]>([]); // DB users
   const [searchTerm, setSearchTerm] = useState('');
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<typeof mockUsers[0] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+
+  // Fetch users from DB on mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const dbUsers = (window as any).electronAPI?.getUsers ? await (window as any).electronAPI.getUsers() : [];
+        setUsers(dbUsers);
+      } catch (err) {
+        toast({ title: 'Error', description: 'Failed to fetch users', variant: 'destructive' });
+      }
+    };
+    fetchUsers();
+  }, [toast]);
 
   const form = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
@@ -127,38 +140,35 @@ const UsersPage = () => {
     user.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddOrUpdateUser = (data: z.infer<typeof userFormSchema>) => {
-    if (selectedUser) {
-      // Update existing user
-      setUsers(users.map(u => 
-        u.id === selectedUser.id 
-          ? { ...u, ...data, status: 'active' }
-          : u
-      ));
-      toast({
-        title: 'User Updated',
-        description: `${data.name}'s information has been updated successfully`,
-      });
-    } else {
-      // Add new user
-      const newUser = {
-        id: Date.now().toString(),
-        ...data,
-        status: 'active' as const,
-        lastActive: new Date().toISOString(),
-      };
-      setUsers([...users, newUser]);
-      toast({
-        title: 'User Added',
-        description: `${data.name} has been added successfully`,
-      });
+  // Add or update user
+  const handleAddOrUpdateUser = async (data: any) => {
+    try {
+      if (selectedUser) {
+        // Update existing user
+        await (window as any).electronAPI.updateUser({ ...selectedUser, ...data });
+        toast({ title: 'User Updated', description: `${data.name}'s information has been updated successfully` });
+      } else {
+        // Add new user
+        const newUser = {
+          id: Date.now().toString(),
+          ...data,
+          status: 'active',
+          lastActive: new Date().toISOString(),
+        };
+        await (window as any).electronAPI.addUser(newUser);
+        toast({ title: 'User Added', description: `${data.name} has been added successfully` });
+      }
+      setOpenAddDialog(false);
+      setSelectedUser(null);
+      // Refresh users
+      const dbUsers = await (window as any).electronAPI.getUsers();
+      setUsers(dbUsers);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to save user', variant: 'destructive' });
     }
-    setOpenAddDialog(false);
-    form.reset();
-    setSelectedUser(null);
   };
 
-  const handleEditUser = (user: typeof mockUsers[0]) => {
+  const handleEditUser = (user: any) => {
     setSelectedUser(user);
     form.reset({
       name: user.name,
@@ -168,24 +178,29 @@ const UsersPage = () => {
     setOpenAddDialog(true);
   };
 
-  const handleDeleteClick = (user: typeof mockUsers[0]) => {
+  const handleDeleteClick = (user: any) => {
     setSelectedUser(user);
     setOpenDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
+  // Delete user
+  const confirmDelete = async () => {
     if (selectedUser) {
-      setUsers(users.filter(u => u.id !== selectedUser.id));
-      toast({
-        title: 'User Deleted',
-        description: `${selectedUser.name} has been deleted successfully`,
-      });
-      setOpenDeleteDialog(false);
-      setSelectedUser(null);
+      try {
+        await (window as any).electronAPI.deleteUser(selectedUser.id);
+        toast({ title: 'User Deleted', description: `${selectedUser.name} has been deleted successfully` });
+        setOpenDeleteDialog(false);
+        setSelectedUser(null);
+        // Refresh users
+        const dbUsers = await (window as any).electronAPI.getUsers();
+        setUsers(dbUsers);
+      } catch (err) {
+        toast({ title: 'Error', description: 'Failed to delete user', variant: 'destructive' });
+      }
     }
   };
 
-  const handleResetPassword = (user: typeof mockUsers[0]) => {
+  const handleResetPassword = (user: any) => {
     toast({
       title: 'Password Reset Email Sent',
       description: `A password reset link has been sent to ${user.email}`,

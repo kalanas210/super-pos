@@ -94,7 +94,7 @@ export const generateSalesReport = (data: ReportData) => {
     ['Growth', `${data.salesData.trend > 0 ? '+' : ''}${data.salesData.trend}%`],
   ];
   
-  autoTable(doc, {
+  doc.autoTable({
     startY: 55,
     head: [['Metric', 'Value']],
     body: summaryData,
@@ -114,7 +114,7 @@ export const generateSalesReport = (data: ReportData) => {
     `${product.percentage}%`,
   ]);
   
-  autoTable(doc, {
+  doc.autoTable({
     startY: doc.lastAutoTable.finalY + 20,
     head: [['Product', 'Category', 'Sales', 'Quantity', 'Share']],
     body: productData,
@@ -133,7 +133,7 @@ export const generateSalesReport = (data: ReportData) => {
     `${cat.trend > 0 ? '+' : ''}${cat.trend}%`,
   ]);
   
-  autoTable(doc, {
+  doc.autoTable({
     startY: doc.lastAutoTable.finalY + 20,
     head: [['Category', 'Sales', 'Share', 'Growth']],
     body: categoryData,
@@ -156,7 +156,7 @@ export const generateSalesReport = (data: ReportData) => {
   return doc;
 };
 
-export const generateInvoicePDF = (invoice: InvoiceData) => {
+export const generateInvoicePDF = (invoice: InvoiceData, noSave?: boolean) => {
   const doc = new jsPDF() as jsPDFWithAutoTable;
   const pageWidth = doc.internal.pageSize.width;
 
@@ -212,5 +212,8 @@ export const generateInvoicePDF = (invoice: InvoiceData) => {
   doc.text('Thank you for your business!', pageWidth / 2, finalY + 20, { align: 'center' });
 
   // Save the PDF
-  doc.save(`invoice-${invoice.id}.pdf`);
+  if (!noSave) {
+    doc.save(`invoice-${invoice.id}.pdf`);
+  }
+  return doc;
 }; 

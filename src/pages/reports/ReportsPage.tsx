@@ -3,7 +3,7 @@ import {
   BarChart3, Download, Calendar, Filter, 
   TrendingUp, TrendingDown, DollarSign, Package,
   Users, ShoppingCart, ArrowUpRight, ArrowDownRight,
-  FileDown
+  FileDown, Printer
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -100,6 +100,42 @@ const ReportsPage = () => {
     }
   };
 
+  const handlePrint = () => {
+    try {
+      const reportData = {
+        period: period === 'daily' ? 'Daily' : period === 'weekly' ? 'Weekly' : 'Monthly',
+        startDate,
+        endDate,
+        salesData: currentData,
+        topProducts,
+        salesByCategory,
+      };
+      const doc = generateSalesReport(reportData);
+      if (window.electronAPI && window.electronAPI.printPDF) {
+        window.electronAPI.printPDF(doc.output('blob'));
+      } else {
+        const pdfBlob = doc.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
+        const printWindow = window.open(url);
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+      }
+      toast({
+        title: 'Printing Report',
+        description: 'The sales report is being printed.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Print Failed',
+        description: 'Failed to print report',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -109,10 +145,16 @@ const ReportsPage = () => {
             View and analyze your business performance
           </p>
         </div>
-        <Button onClick={handleGeneratePDF}>
-          <FileDown className="mr-2 h-4 w-4" />
-          Generate PDF
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button onClick={handleGeneratePDF}>
+            <FileDown className="mr-2 h-4 w-4" />
+            Generate PDF
+          </Button>
+          <Button onClick={handlePrint} variant="outline">
+            <Printer className="mr-2 h-4 w-4" />
+            Print Report
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

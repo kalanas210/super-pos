@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   FileText, Search, Filter, MoreHorizontal, Printer, 
   Download, Mail, AlertCircle, Receipt, ArrowUpDown 
@@ -49,87 +49,102 @@ import { useNavigate } from 'react-router-dom';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
 
 // Mock invoices data
-const mockInvoices = [
-  {
-    id: 'INV-001',
-    date: '2024-04-18 14:30:00',
-    customer: {
-      name: 'Rajiv Kumar',
-      email: 'rajiv@example.com',
-      phone: '+94 71 234 5678',
-    },
-    items: 8,
-    total: 1450,
-    status: 'paid',
-    paymentMethod: 'cash',
-    cashier: 'John Doe',
-  },
-  {
-    id: 'INV-002',
-    date: '2024-04-18 13:45:00',
-    customer: {
-      name: 'Anika Silva',
-      email: 'anika@example.com',
-      phone: '+94 77 345 6789',
-    },
-    items: 5,
-    total: 870,
-    status: 'paid',
-    paymentMethod: 'card',
-    cashier: 'Jane Smith',
-  },
-  {
-    id: 'INV-003',
-    date: '2024-04-17 16:20:00',
-    customer: {
-      name: 'Malik Fernando',
-      email: 'malik@example.com',
-      phone: '+94 76 456 7890',
-    },
-    items: 12,
-    total: 2240,
-    status: 'pending',
-    paymentMethod: 'upi',
-    cashier: 'John Doe',
-  },
-  {
-    id: 'INV-004',
-    date: '2024-04-17 15:10:00',
-    customer: {
-      name: 'Priya Patel',
-      email: 'priya@example.com',
-      phone: '+94 75 567 8901',
-    },
-    items: 7,
-    total: 1100,
-    status: 'paid',
-    paymentMethod: 'cash',
-    cashier: 'Sarah Wilson',
-  },
-  {
-    id: 'INV-005',
-    date: '2024-04-17 14:25:00',
-    customer: {
-      name: 'Mohamed Ali',
-      email: 'mohamed@example.com',
-      phone: '+94 74 678 9012',
-    },
-    items: 3,
-    total: 450,
-    status: 'void',
-    paymentMethod: 'card',
-    cashier: 'Jane Smith',
-  },
-];
+// const mockInvoices = [
+//   {
+//     id: 'INV-001',
+//     date: '2024-04-18 14:30:00',
+//     customer: {
+//       name: 'Rajiv Kumar',
+//       email: 'rajiv@example.com',
+//       phone: '+94 71 234 5678',
+//     },
+//     items: 8,
+//     total: 1450,
+//     status: 'paid',
+//     paymentMethod: 'cash',
+//     cashier: 'John Doe',
+//   },
+//   {
+//     id: 'INV-002',
+//     date: '2024-04-18 13:45:00',
+//     customer: {
+//       name: 'Anika Silva',
+//       email: 'anika@example.com',
+//       phone: '+94 77 345 6789',
+//     },
+//     items: 5,
+//     total: 870,
+//     status: 'paid',
+//     paymentMethod: 'card',
+//     cashier: 'Jane Smith',
+//   },
+//   {
+//     id: 'INV-003',
+//     date: '2024-04-17 16:20:00',
+//     customer: {
+//       name: 'Malik Fernando',
+//       email: 'malik@example.com',
+//       phone: '+94 76 456 7890',
+//     },
+//     items: 12,
+//     total: 2240,
+//     status: 'pending',
+//     paymentMethod: 'upi',
+//     cashier: 'John Doe',
+//   },
+//   {
+//     id: 'INV-004',
+//     date: '2024-04-17 15:10:00',
+//     customer: {
+//       name: 'Priya Patel',
+//       email: 'priya@example.com',
+//       phone: '+94 75 567 8901',
+//     },
+//     items: 7,
+//     total: 1100,
+//     status: 'paid',
+//     paymentMethod: 'cash',
+//     cashier: 'Sarah Wilson',
+//   },
+//   {
+//     id: 'INV-005',
+//     date: '2024-04-17 14:25:00',
+//     customer: {
+//       name: 'Mohamed Ali',
+//       email: 'mohamed@example.com',
+//       phone: '+94 74 678 9012',
+//     },
+//     items: 3,
+//     total: 450,
+//     status: 'void',
+//     paymentMethod: 'card',
+//     cashier: 'Jane Smith',
+//   },
+// ];
 
 const InvoicesPage = () => {
-  const [invoices, setInvoices] = useState(mockInvoices);
+  const [invoices, setInvoices] = useState<any[]>([]); // DB invoices
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedInvoice, setSelectedInvoice] = useState<typeof mockInvoices[0] | null>(null);
+  const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
   const [showVoidDialog, setShowVoidDialog] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Fetch invoices from DB on mount
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        const dbInvoices = (window as any).electronAPI?.getInvoices ? await (window as any).electronAPI.getInvoices() : [];
+        setInvoices(dbInvoices);
+      } catch (err) {
+        toast({ title: 'Error', description: 'Failed to fetch invoices', variant: 'destructive' });
+      }
+    };
+    fetchInvoices();
+  }, [toast]);
 
   // Filter invoices based on search term and status
   const filteredInvoices = invoices.filter((invoice) => {
@@ -144,21 +159,13 @@ const InvoicesPage = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handlePrint = (invoice: typeof mockInvoices[0]) => {
-    toast({
-      title: 'Printing Invoice',
-      description: `Invoice ${invoice.id} is being sent to printer`,
-    });
-  };
-
-  const handleDownload = (invoice: typeof mockInvoices[0]) => {
+  const handlePrint = (invoice: any) => {
     try {
-      // Mock items data since it's not in the original invoice
-      const items = [
+      // Use the same data as for PDF
+      const items = invoice.items || [
         { name: 'Item 1', quantity: 2, price: 100, total: 200 },
         { name: 'Item 2', quantity: 1, price: 150, total: 150 },
       ];
-
       const invoiceData = {
         ...invoice,
         items,
@@ -166,9 +173,46 @@ const InvoicesPage = () => {
         tax: invoice.total * 0.15,
         total: invoice.total * 1.15,
       };
+      const doc = generateInvoicePDF(invoiceData, true); // true = do not auto-save
+      if (window.electronAPI && window.electronAPI.printPDF) {
+        window.electronAPI.printPDF(doc.output('blob'));
+      } else {
+        const pdfBlob = doc.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
+        const printWindow = window.open(url);
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+      }
+      toast({
+        title: 'Printing Invoice',
+        description: `Invoice ${invoice.id} is being sent to printer`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Print Failed',
+        description: 'Failed to print invoice',
+        variant: 'destructive',
+      });
+    }
+  };
 
+  const handleDownload = (invoice: any) => {
+    try {
+      const items = invoice.items || [
+        { name: 'Item 1', quantity: 2, price: 100, total: 200 },
+        { name: 'Item 2', quantity: 1, price: 150, total: 150 },
+      ];
+      const invoiceData = {
+        ...invoice,
+        items,
+        subtotal: invoice.total,
+        tax: invoice.total * 0.15,
+        total: invoice.total * 1.15,
+      };
       generateInvoicePDF(invoiceData);
-
       toast({
         title: 'Invoice Downloaded',
         description: `Invoice ${invoice.id} has been downloaded successfully`,
@@ -182,7 +226,7 @@ const InvoicesPage = () => {
     }
   };
 
-  const handleEmailInvoice = (invoice: typeof mockInvoices[0]) => {
+  const handleEmailInvoice = (invoice: any) => {
     toast({
       title: 'Email Sent',
       description: `Invoice ${invoice.id} has been emailed to ${invoice.customer.email}`,
@@ -202,6 +246,51 @@ const InvoicesPage = () => {
       });
       setShowVoidDialog(false);
       setSelectedInvoice(null);
+    }
+  };
+
+  // Add or update invoice
+  const handleAddOrUpdateInvoice = async (data: any) => {
+    try {
+      if (selectedInvoice) {
+        // Update existing invoice
+        await (window as any).electronAPI.updateInvoice({ ...selectedInvoice, ...data });
+        toast({ title: 'Invoice Updated', description: `Invoice updated successfully` });
+      } else {
+        // Add new invoice
+        const newInvoice = {
+          id: Date.now().toString(),
+          ...data,
+          date: new Date().toISOString(),
+          status: 'paid',
+        };
+        await (window as any).electronAPI.addInvoice(newInvoice);
+        toast({ title: 'Invoice Added', description: `Invoice added successfully` });
+      }
+      setOpenAddDialog(false);
+      setSelectedInvoice(null);
+      // Refresh invoices
+      const dbInvoices = await (window as any).electronAPI.getInvoices();
+      setInvoices(dbInvoices);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to save invoice', variant: 'destructive' });
+    }
+  };
+
+  // Delete invoice
+  const confirmDelete = async () => {
+    if (selectedInvoice) {
+      try {
+        await (window as any).electronAPI.deleteInvoice(selectedInvoice.id);
+        toast({ title: 'Invoice Deleted', description: `Invoice deleted successfully` });
+        setOpenDeleteDialog(false);
+        setSelectedInvoice(null);
+        // Refresh invoices
+        const dbInvoices = await (window as any).electronAPI.getInvoices();
+        setInvoices(dbInvoices);
+      } catch (err) {
+        toast({ title: 'Error', description: 'Failed to delete invoice', variant: 'destructive' });
+      }
     }
   };
 

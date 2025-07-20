@@ -8,6 +8,7 @@ export const mockProducts = [
     category: 'Groceries',
     stockQuantity: 30,
     minStockLevel: 10,
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '2',
@@ -17,6 +18,7 @@ export const mockProducts = [
     category: 'Groceries',
     stockQuantity: 25,
     minStockLevel: 8,
+    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '3',
@@ -26,6 +28,7 @@ export const mockProducts = [
     category: 'Groceries',
     stockQuantity: 15,
     minStockLevel: 5,
+    image: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '4',
@@ -35,6 +38,7 @@ export const mockProducts = [
     category: 'Beverages',
     stockQuantity: 18,
     minStockLevel: 6,
+    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '5',
@@ -44,6 +48,7 @@ export const mockProducts = [
     category: 'Dairy',
     stockQuantity: 12,
     minStockLevel: 10,
+    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '6',
@@ -53,6 +58,7 @@ export const mockProducts = [
     category: 'Dairy',
     stockQuantity: 20,
     minStockLevel: 8,
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '7',
@@ -62,6 +68,7 @@ export const mockProducts = [
     category: 'Groceries',
     stockQuantity: 28,
     minStockLevel: 10,
+    image: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '8',
@@ -71,6 +78,7 @@ export const mockProducts = [
     category: 'Beverages',
     stockQuantity: 22,
     minStockLevel: 7,
+    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '9',
@@ -80,6 +88,7 @@ export const mockProducts = [
     category: 'Personal Care',
     stockQuantity: 14,
     minStockLevel: 5,
+    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '10',
@@ -89,6 +98,7 @@ export const mockProducts = [
     category: 'Personal Care',
     stockQuantity: 16,
     minStockLevel: 6,
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '11',
@@ -98,6 +108,7 @@ export const mockProducts = [
     category: 'Personal Care',
     stockQuantity: 10,
     minStockLevel: 4,
+    image: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '12',
@@ -107,6 +118,7 @@ export const mockProducts = [
     category: 'Snacks',
     stockQuantity: 35,
     minStockLevel: 10,
+    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '13',
@@ -116,6 +128,7 @@ export const mockProducts = [
     category: 'Snacks',
     stockQuantity: 40,
     minStockLevel: 12,
+    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '14',
@@ -125,6 +138,7 @@ export const mockProducts = [
     category: 'Household',
     stockQuantity: 18,
     minStockLevel: 6,
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '15',
@@ -134,6 +148,7 @@ export const mockProducts = [
     category: 'Household',
     stockQuantity: 12,
     minStockLevel: 5,
+    image: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '16',
@@ -143,6 +158,7 @@ export const mockProducts = [
     category: 'Meat',
     stockQuantity: 8,
     minStockLevel: 4,
+    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '17',
@@ -152,6 +168,7 @@ export const mockProducts = [
     category: 'Vegetables',
     stockQuantity: 15,
     minStockLevel: 8,
+    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '18',
@@ -161,6 +178,7 @@ export const mockProducts = [
     category: 'Vegetables',
     stockQuantity: 20,
     minStockLevel: 10,
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '19',
@@ -170,6 +188,7 @@ export const mockProducts = [
     category: 'Fruits',
     stockQuantity: 12,
     minStockLevel: 5,
+    image: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '20',
@@ -179,6 +198,7 @@ export const mockProducts = [
     category: 'Fruits',
     stockQuantity: 18,
     minStockLevel: 6,
+    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '21',
@@ -188,6 +208,7 @@ export const mockProducts = [
     category: 'Personal Care',
     stockQuantity: 22,
     minStockLevel: 8,
+    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '22',
@@ -197,6 +218,7 @@ export const mockProducts = [
     category: 'Household',
     stockQuantity: 16,
     minStockLevel: 6,
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '23',
@@ -206,6 +228,7 @@ export const mockProducts = [
     category: 'Snacks',
     stockQuantity: 45,
     minStockLevel: 15,
+    image: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '24',
@@ -215,6 +238,7 @@ export const mockProducts = [
     category: 'Groceries',
     stockQuantity: 2,
     minStockLevel: 5,
+    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '25',
@@ -224,6 +248,7 @@ export const mockProducts = [
     category: 'Ready to Eat',
     stockQuantity: 0,
     minStockLevel: 10,
+    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '26',
@@ -233,6 +258,7 @@ export const mockProducts = [
     category: 'Dairy',
     stockQuantity: 3,
     minStockLevel: 7,
+    image: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '27',
@@ -242,6 +268,7 @@ export const mockProducts = [
     category: 'Dairy',
     stockQuantity: 9,
     minStockLevel: 5,
+    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=256&q=80',
   },
   {
     id: '28',
@@ -251,6 +278,7 @@ export const mockProducts = [
     category: 'Bakery',
     stockQuantity: 6,
     minStockLevel: 8,
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=facearea&w=256&q=80',
   },
 ];
 

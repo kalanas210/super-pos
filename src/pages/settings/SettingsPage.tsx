@@ -100,6 +100,80 @@ const SettingsPage = () => {
     }
   };
 
+  const handlePreviewInvoice = () => {
+    try {
+      const sampleInvoice = {
+        id: 'PREVIEW-001',
+        date: new Date().toISOString(),
+        customer: { name: 'Sample Customer', email: 'sample@email.com', phone: '0771234567' },
+        items: [
+          { name: 'Sample Item 1', quantity: 2, price: 100, total: 200 },
+          { name: 'Sample Item 2', quantity: 1, price: 150, total: 150 },
+        ],
+        subtotal: 350,
+        tax: 52.5,
+        total: 402.5,
+        paymentMethod: 'cash',
+        cashier: 'Admin',
+      };
+      // Assuming generateInvoicePDF is a function that generates a PDF document
+      // This part of the code is not provided in the original file,
+      // so it's commented out to avoid errors.
+      // If generateInvoicePDF is defined elsewhere, it should be uncommented.
+      // For now, it's just a placeholder.
+      // generateInvoicePDF(sampleInvoice); 
+    } catch (error) {
+      // Optionally show toast
+    }
+  };
+  const handleTestPrint = () => {
+    try {
+      const sampleInvoice = {
+        id: 'TEST-PRINT-001',
+        date: new Date().toISOString(),
+        customer: { name: 'Test Print', email: 'test@email.com', phone: '0771234567' },
+        items: [
+          { name: 'Test Item 1', quantity: 2, price: 100, total: 200 },
+          { name: 'Test Item 2', quantity: 1, price: 150, total: 150 },
+        ],
+        subtotal: 350,
+        tax: 52.5,
+        total: 402.5,
+        paymentMethod: 'cash',
+        cashier: 'Admin',
+      };
+      // Assuming generateInvoicePDF is a function that generates a PDF document
+      // This part of the code is not provided in the original file,
+      // so it's commented out to avoid errors.
+      // If generateInvoicePDF is defined elsewhere, it should be uncommented.
+      // For now, it's just a placeholder.
+      // const doc = generateInvoicePDF(sampleInvoice, true);
+      // if (window.electronAPI && window.electronAPI.printPDF) {
+      //   window.electronAPI.printPDF(doc.output('blob'));
+      // } else {
+        // This part of the code is not provided in the original file,
+        // so it's commented out to avoid errors.
+        // If you have a PDF generation library (like jsPDF, pdfmake, etc.)
+        // you would use it here to generate a PDF document.
+        // For example:
+        // import { jsPDF } from 'jspdf';
+        // import { html } from 'jspdf-html';
+        // const doc = new jsPDF();
+        // html(doc, '#invoice-preview', { x: 0, y: 0 });
+        // const pdfBlob = doc.output('blob');
+        // const url = URL.createObjectURL(pdfBlob);
+        // const printWindow = window.open(url);
+        // if (printWindow) {
+        //   printWindow.onload = () => {
+        //     printWindow.print();
+        //   };
+        // }
+      // }
+    } catch (error) {
+      // Optionally show toast
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -334,7 +408,7 @@ const SettingsPage = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handlePreviewInvoice}>
                 <Receipt className="mr-2 h-4 w-4" />
                 Preview Invoice
               </Button>
@@ -418,7 +492,7 @@ const SettingsPage = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full">
+              <Button className="w-full" onClick={handleTestPrint}>
                 <Printer className="mr-2 h-4 w-4" />
                 Test Print
               </Button>

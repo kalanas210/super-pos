@@ -4,6 +4,7 @@ declare global {
     electronAPI?: {
       onNavigateTo: (callback: (event: unknown, path: string) => void) => void;
       removeAllListeners: (event: string) => void;
+      printPDF: (blob: Blob) => void; // Added for printing
     }
   }
 }
@@ -108,16 +109,13 @@ const DashboardLayout = () => {
           items: Math.floor(Math.random() * 100) + 20,
         };
       });
-
       const categories = Array.from(new Set(mockProducts.map(p => p.category)));
       const totalSales = lastWeek.reduce((sum, day) => sum + day.amount, 0);
-      
       const salesByCategory = categories.map(cat => ({
         category: cat,
         amount: Math.floor(Math.random() * 100000) + 20000,
         percentage: Math.random() * 100 / categories.length,
       }));
-
       const reportData = {
         title: 'Sales Report',
         period: `${format(new Date(lastWeek[6].date), 'dd/MM/yyyy')} - ${format(new Date(lastWeek[0].date), 'dd/MM/yyyy')}`,
@@ -127,9 +125,24 @@ const DashboardLayout = () => {
         salesByDay: lastWeek.reverse(),
         salesByCategory,
       };
-
       const doc = generateReport(reportData);
-      doc.save(`sales-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      // Print logic
+      if (window.electronAPI && window.electronAPI.printPDF) {
+        window.electronAPI.printPDF(doc.output('blob'));
+      } else {
+        const pdfBlob = doc.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
+        const printWindow = window.open(url);
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+      }
+      toast({
+        title: 'Printing Report',
+        description: 'The sales report is being printed.',
+      });
     } catch (error) {
       toast({
         title: 'Print Failed',
@@ -203,7 +216,7 @@ const DashboardLayout = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-xl transition-all duration-300 ease-in-out md:relative",
+          "fixed inset-y-0 left-0 z-50 flex w-56 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-xl transition-all duration-300 ease-in-out md:relative",
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:w-16"
         )}
       >
@@ -237,28 +250,6 @@ const DashboardLayout = () => {
             <X className="h-5 w-5" />
           </Button>
         </div>
-
-        {/* Quick stats */}
-        {sidebarOpen && (
-          <div className="p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 border-b">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white dark:bg-slate-900 p-3 rounded-lg shadow-sm">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Today</span>
-                </div>
-                <p className="text-lg font-bold text-green-600 dark:text-green-400">Rs 24,850</p>
-              </div>
-              <div className="bg-white dark:bg-slate-900 p-3 rounded-lg shadow-sm">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Sales</span>
-                </div>
-                <p className="text-lg font-bold text-blue-600 dark:text-blue-400">45</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Sidebar content */}
         <div className="flex flex-1 flex-col">
@@ -453,59 +444,6 @@ const DashboardLayout = () => {
 
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top navbar */}
-        <header className="h-16 border-b bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 shadow-sm">
-          <div className="flex items-center md:hidden">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggleSidebar}
-              className="text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          </div>
-          
-          {/* Quick actions */}
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCalculatorOpen(true)}
-              className="hover:bg-slate-100 dark:hover:bg-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
-            >
-              <CalculatorIcon className="h-4 w-4 mr-2" />
-              Calculator
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="hidden md:flex border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 bg-white dark:bg-slate-900"
-            >
-              <Printer className="h-4 w-4 mr-2" />
-              Print
-            </Button>
-          </div>
-          
-          <div className="ml-auto flex items-center space-x-2">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 bg-white dark:bg-slate-900"
-            >
-              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon"
-              className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 bg-white dark:bg-slate-900"
-            >
-              <Bell className="h-5 w-5" />
-            </Button>
-          </div>
-        </header>
-
         {/* Main content area */}
         <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
           <div className="container mx-auto px-6 py-6 max-w-7xl h-full">

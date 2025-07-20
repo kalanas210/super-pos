@@ -36,7 +36,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockProducts } from '@/utils/mockData';
+// Remove mockProducts import
+// import { mockProducts } from '@/utils/mockData';
 import { cn } from '@/lib/utils';
 import { PaymentSuccessDialog } from '@/components/PaymentSuccessDialog';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
@@ -70,7 +71,8 @@ const customerFormSchema = z.object({
 const SalesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
+  const [products, setProducts] = useState<any[]>([]); // Fetched from DB
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [billSummary, setBillSummary] = useState<BillSummary>({
     subtotal: 0,
     discount: 0,
@@ -88,6 +90,10 @@ const SalesPage = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [currentInvoiceId, setCurrentInvoiceId] = useState<string>('');
+  // Store the last invoice data for printing and PDF
+  const [lastInvoiceData, setLastInvoiceData] = useState<any>(null);
+  const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState('');
   
   const { toast } = useToast();
   
@@ -107,22 +113,39 @@ const SalesPage = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch products from DB on mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        if ((window as any).electronAPI && (window as any).electronAPI.getProducts) {
+          const dbProducts = await (window as any).electronAPI.getProducts();
+          setProducts(dbProducts);
+          setFilteredProducts(dbProducts);
+        }
+      } catch (err) {
+        setProducts([]);
+        setFilteredProducts([]);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   // Filter products based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
-      setFilteredProducts(mockProducts);
+      setFilteredProducts(products);
     } else {
       const term = searchTerm.toLowerCase();
       setFilteredProducts(
-        mockProducts.filter(
+        products.filter(
           (product) =>
             product.name.toLowerCase().includes(term) ||
-            product.barcode.includes(term) ||
-            product.category.toLowerCase().includes(term)
+            (product.barcode || '').includes(term) ||
+            (product.category || '').toLowerCase().includes(term)
         )
       );
     }
-  }, [searchTerm]);
+  }, [searchTerm, products]);
 
   // Calculate bill summary whenever cart or discount changes
   useEffect(() => {
@@ -153,8 +176,9 @@ const SalesPage = () => {
     setSearchTerm(e.target.value);
   };
 
+  // Update handleBarcodeScan to use products from DB
   const handleBarcodeScan = (barcode: string) => {
-    const product = mockProducts.find(p => p.barcode === barcode);
+    const product = products.find(p => p.barcode === barcode);
     if (product) {
       addToCart(product);
       toast({
@@ -170,23 +194,38 @@ const SalesPage = () => {
     }
   };
 
-  const addToCart = (product: typeof mockProducts[0]) => {
+  // Update all product lookups in cart logic to use products from DB
+  const addToCart = (product: any) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
-      
+      const maxQty = product.stock_quantity ?? product.stockQuantity ?? 0;
       if (existingItem) {
-        // Increment quantity if item is already in cart
-        return prevCart.map(item => 
-          item.id === product.id 
-            ? { 
-                ...item, 
+        if (existingItem.quantity >= maxQty) {
+          toast({
+            title: 'Stock limit reached',
+            description: `Cannot add more than ${maxQty} units of ${product.name}`,
+            variant: 'destructive',
+          });
+          return prevCart;
+        }
+        return prevCart.map(item =>
+          item.id === product.id
+            ? {
+                ...item,
                 quantity: item.quantity + 1,
-                subtotal: (item.quantity + 1) * item.price 
-              } 
+                subtotal: (item.quantity + 1) * item.price
+              }
             : item
         );
       } else {
-        // Add new item to cart
+        if (maxQty < 1) {
+          toast({
+            title: 'Out of stock',
+            description: `${product.name} is currently out of stock`,
+            variant: 'destructive',
+          });
+          return prevCart;
+        }
         return [
           ...prevCart,
           {
@@ -204,15 +243,24 @@ const SalesPage = () => {
 
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    
-    setCart(prevCart => 
-      prevCart.map(item => 
-        item.id === id 
-          ? { 
-              ...item, 
+    const product = products.find(p => p.id === id);
+    const maxQty = product ? (product.stock_quantity ?? product.stockQuantity ?? 0) : 0;
+    if (product && newQuantity > maxQty) {
+      toast({
+        title: 'Stock limit reached',
+        description: `Cannot set quantity above available stock (${maxQty})`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.id === id
+          ? {
+              ...item,
               quantity: newQuantity,
-              subtotal: newQuantity * item.price 
-            } 
+              subtotal: newQuantity * item.price
+            }
           : item
       )
     );
@@ -292,6 +340,7 @@ const SalesPage = () => {
       paymentMethod,
       cashier: 'John Doe', // Replace with actual logged-in user
     };
+    setLastInvoiceData(invoiceData); // Store for print/pdf
 
     // In a real app, save the invoice to database here
 
@@ -320,37 +369,60 @@ const SalesPage = () => {
   };
 
   const handlePrintReceipt = () => {
-    // Implement thermal printer integration here
-    toast({
-      title: 'Printing receipt',
-      description: `Invoice #${currentInvoiceId} is being printed`,
-    });
+    if (!lastInvoiceData) {
+      toast({
+        title: 'No invoice to print',
+        description: 'Please complete a sale first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    try {
+      // For Electron: use window.print() or Electron print API
+      // For web: open PDF and trigger print
+      const doc = generateInvoicePDF(lastInvoiceData, true); // true = do not auto-save
+      if (window.electronAPI && window.electronAPI.printPDF) {
+        // If Electron API is available
+        window.electronAPI.printPDF(doc.output('blob'));
+      } else {
+        // Web: open PDF in new window and print
+        const pdfBlob = doc.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
+        const printWindow = window.open(url);
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+      }
+      toast({
+        title: 'Printing receipt',
+        description: `Invoice #${lastInvoiceData.id} is being printed`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Print failed',
+        description: 'Failed to print receipt',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDownloadPDF = () => {
+    if (!lastInvoiceData) {
+      toast({
+        title: 'No invoice to download',
+        description: 'Please complete a sale first.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
-      const invoiceData = {
-        id: currentInvoiceId,
-        date: new Date().toISOString(),
-        customer: customerData || {
-          name: 'Walk-in Customer',
-          email: '',
-          phone: '',
-        },
-        items: cart.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          total: item.subtotal,
-        })),
-        subtotal: billSummary.subtotal,
-        tax: billSummary.taxAmount,
-        total: billSummary.total,
-        paymentMethod,
-        cashier: 'John Doe', // Replace with actual logged-in user
-      };
-
-      generateInvoicePDF(invoiceData);
+      generateInvoicePDF(lastInvoiceData);
+      toast({
+        title: 'Invoice Downloaded',
+        description: `Invoice #${lastInvoiceData.id} has been downloaded successfully`,
+      });
     } catch (error) {
       toast({
         title: 'Download failed',
@@ -358,6 +430,21 @@ const SalesPage = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleBarcodeDialogSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!barcodeInput.trim()) {
+      toast({
+        title: 'Enter a barcode',
+        description: 'Please enter or scan a barcode',
+        variant: 'destructive',
+      });
+      return;
+    }
+    handleBarcodeScan(barcodeInput.trim());
+    setBarcodeInput('');
+    setShowBarcodeDialog(false);
   };
 
   return (
@@ -396,7 +483,12 @@ const SalesPage = () => {
                   onChange={handleSearch}
                 />
               </div>
-              <Button size="lg" variant="outline" className="px-6 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <Button
+                size="lg"
+                variant="outline"
+                className="px-6 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={() => setShowBarcodeDialog(true)}
+              >
                 <Scan className="h-5 w-5 mr-2" />
                 Scan
               </Button>
@@ -411,10 +503,11 @@ const SalesPage = () => {
               key={product.id} 
               className={cn(
                 "cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-green-300 dark:hover:border-green-500 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700",
-                product.stockQuantity <= 0 && "opacity-50 grayscale"
+                product.stock_quantity <= 0 && "opacity-50 grayscale"
               )}
               onClick={() => {
-                if (product.stockQuantity > 0) {
+                const maxQty = product.stock_quantity ?? product.stockQuantity ?? 0;
+                if (maxQty > 0) {
                   addToCart(product);
                 } else {
                   toast({
@@ -433,10 +526,10 @@ const SalesPage = () => {
                 <div className="flex justify-between items-center">
                   <p className="text-lg font-bold text-green-600 dark:text-green-400">Rs {product.price}</p>
                   <Badge 
-                    variant={product.stockQuantity > 5 ? "outline" : product.stockQuantity > 0 ? "secondary" : "destructive"} 
+                    variant={product.stock_quantity > 5 ? "outline" : product.stock_quantity > 0 ? "secondary" : "destructive"} 
                     className="text-xs"
                   >
-                    {product.stockQuantity > 0 ? `${product.stockQuantity} left` : 'Out of stock'}
+                    {product.stock_quantity > 0 ? `${product.stock_quantity} left` : 'Out of stock'}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{product.category}</p>
@@ -512,6 +605,11 @@ const SalesPage = () => {
                               size="icon"
                               className="h-8 w-8 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              disabled={(() => {
+                                const product = products.find(p => p.id === item.id);
+                                const maxQty = product ? (product.stock_quantity ?? product.stockQuantity ?? 0) : 0;
+                                return maxQty < 1;
+                              })()}
                             >
                               <Plus className="h-3 w-3" />
                             </Button>
@@ -849,6 +947,43 @@ const SalesPage = () => {
               Complete Sale
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Barcode Scan Dialog */}
+      <Dialog open={showBarcodeDialog} onOpenChange={setShowBarcodeDialog}>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-slate-100">
+              <Scan className="h-5 w-5" />
+              Scan or Enter Barcode
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-slate-400">
+              Enter or scan a product barcode to add it to the cart
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleBarcodeDialogSubmit} className="space-y-4">
+            <Input
+              autoFocus
+              placeholder="Enter barcode..."
+              value={barcodeInput}
+              onChange={e => setBarcodeInput(e.target.value)}
+              className="h-12 text-lg bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  handleBarcodeDialogSubmit(e as any);
+                }
+              }}
+            />
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setShowBarcodeDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="btn-primary">
+                Add to Cart
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

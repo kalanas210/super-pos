@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Store, Search, Filter, MoreHorizontal, Edit, 
   Trash2, AlertTriangle, Plus, FileDown, FileUp 
 } from 'lucide-react';
-import { mockProducts } from '@/utils/mockData';
+// Remove mockProducts import
+// import { mockProducts } from '@/utils/mockData';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -85,23 +86,42 @@ const InventoryPage = () => {
   });
   const { toast } = useToast();
 
+  const [products, setProducts] = useState<any[]>([]); // DB products
+  const [categories, setCategories] = useState<any[]>(['all']); // DB categories
+  const [stockMovements, setStockMovements] = useState<any[]>([]);
+
+  // Fetch products, categories, and stock movements from DB
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const dbProducts = (window as any).electronAPI?.getProducts ? await (window as any).electronAPI.getProducts() : [];
+        setProducts(dbProducts);
+        const dbCategories = (window as any).electronAPI?.getCategories ? await (window as any).electronAPI.getCategories() : [];
+        setCategories(['all', ...dbCategories.map((cat: any) => cat.name)]);
+        const dbStockMovements = (window as any).electronAPI?.getStockMovements ? await (window as any).electronAPI.getStockMovements() : [];
+        setStockMovements(dbStockMovements);
+      } catch (err) {
+        // handle error
+      }
+    };
+    fetchData();
+  }, []);
+
   // Convert mock products to inventory items
-  const inventoryItems: InventoryItem[] = mockProducts.map(product => ({
+  const inventoryItems: InventoryItem[] = products.map(product => ({
     id: product.id,
     name: product.name,
     category: product.category,
     stockQuantity: product.stockQuantity,
     minStockLevel: product.minStockLevel,
-    lastRestocked: '2024-04-15', // Mock date
-    supplier: 'Default Supplier Ltd',
+    lastRestocked: product.lastRestocked || 'N/A',
+    supplier: product.supplier || 'Default Supplier Ltd',
     status: product.stockQuantity === 0 
       ? 'out_of_stock' 
       : product.stockQuantity < product.minStockLevel 
       ? 'low_stock' 
       : 'in_stock'
   }));
-
-  const categories = ['all', ...Array.from(new Set(inventoryItems.map(item => item.category)))];
 
   // Filter inventory items based on search term and category
   const filteredItems = inventoryItems.filter((item) => {
@@ -257,6 +277,101 @@ const InventoryPage = () => {
         return <Badge variant="secondary">Low Stock</Badge>;
       case 'out_of_stock':
         return <Badge variant="destructive">Out of Stock</Badge>;
+    }
+  };
+
+  // Add this helper for generating unique IDs
+  const generateId = () => Math.random().toString(36).substr(2, 9);
+
+  // Update the restock/adjust stock handler to use the database
+  const handleRestock = async (product: any, quantity: number, reason = 'Restock') => {
+    try {
+      // 1. Add stock movement
+      const movement = {
+        id: generateId(),
+        product_id: product.id,
+        type: 'in',
+        quantity,
+        reason,
+        date: new Date().toISOString(),
+      };
+      await (window as any).electronAPI.addStockMovement(movement);
+      // 2. Update product stock in DB
+      const updatedProduct = { ...product, stockQuantity: product.stockQuantity + quantity };
+      await (window as any).electronAPI.updateProduct(updatedProduct);
+      // 3. Refresh products and stock movements
+      const dbProducts = await (window as any).electronAPI.getProducts();
+      setProducts(dbProducts);
+      const dbStockMovements = await (window as any).electronAPI.getStockMovements();
+      setStockMovements(dbStockMovements);
+      toast({ title: 'Stock Updated', description: `Added ${quantity} to ${product.name}` });
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to update stock', variant: 'destructive' });
+    }
+  };
+
+  // Update the adjust stock handler similarly
+  const handleAdjustStock = async (product: any, quantity: number, reason = 'Adjustment') => {
+    try {
+      // 1. Add stock movement
+      const movement = {
+        id: generateId(),
+        product_id: product.id,
+        type: quantity > 0 ? 'in' : 'out',
+        quantity: Math.abs(quantity),
+        reason,
+        date: new Date().toISOString(),
+      };
+      await (window as any).electronAPI.addStockMovement(movement);
+      // 2. Update product stock in DB
+      const updatedProduct = { ...product, stockQuantity: product.stockQuantity + quantity };
+      await (window as any).electronAPI.updateProduct(updatedProduct);
+      // 3. Refresh products and stock movements
+      const dbProducts = await (window as any).electronAPI.getProducts();
+      setProducts(dbProducts);
+      const dbStockMovements = await (window as any).electronAPI.getStockMovements();
+      setStockMovements(dbStockMovements);
+      toast({ title: 'Stock Adjusted', description: `Adjusted ${product.name} by ${quantity}` });
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to adjust stock', variant: 'destructive' });
+    }
+  };
+
+  // Add Category
+  const handleAddCategory = async (name: string, description: string) => {
+    try {
+      const newCategory = { id: generateId(), name, description };
+      await (window as any).electronAPI.addCategory(newCategory);
+      const dbCategories = (window as any).electronAPI?.getCategories ? await (window as any).electronAPI.getCategories() : [];
+      setCategories(['all', ...dbCategories.map((cat: any) => cat.name)]);
+      toast({ title: 'Category Added', description: `Added category: ${name}` });
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to add category', variant: 'destructive' });
+    }
+  };
+
+  // Edit Category
+  const handleEditCategory = async (id: string, name: string, description: string) => {
+    try {
+      const updatedCategory = { id, name, description };
+      await (window as any).electronAPI.updateCategory(updatedCategory);
+      const dbCategories = (window as any).electronAPI?.getCategories ? await (window as any).electronAPI.getCategories() : [];
+      setCategories(['all', ...dbCategories.map((cat: any) => cat.name)]);
+      toast({ title: 'Category Updated', description: `Updated category: ${name}` });
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to update category', variant: 'destructive' });
+    }
+  };
+
+  // Delete Category
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      await (window as any).electronAPI.deleteCategory(id);
+      const dbCategories = (window as any).electronAPI?.getCategories ? await (window as any).electronAPI.getCategories() : [];
+      setCategories(['all', ...dbCategories.map((cat: any) => cat.name)]);
+      toast({ title: 'Category Deleted', description: 'Category has been deleted' });
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to delete category', variant: 'destructive' });
     }
   };
 
