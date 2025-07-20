@@ -223,16 +223,24 @@ ipcMain.handle('get-products', async () => {
 // Add a new product
 ipcMain.handle('add-product', async (event, product) => {
   return new Promise((resolve, reject) => {
-    const stmt = db.prepare(`INSERT INTO products (id, name, price, barcode, category_id, stock_quantity, min_stock_level, supplier_id, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const stmt = db.prepare(`INSERT INTO products (id, name, price, sale_price, discount, discount_type, barcode, sku, category_id, brand_id, product_type_id, stock_quantity, min_stock_level, tax, description, is_active, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     stmt.run([
       product.id,
       product.name,
       product.price,
+      product.sale_price,
+      product.discount,
+      product.discount_type,
       product.barcode,
+      product.sku,
       product.category_id,
+      product.brand_id,
+      product.product_type_id,
       product.stock_quantity,
       product.min_stock_level,
-      product.supplier_id,
+      product.tax,
+      product.description,
+      product.is_active ? 1 : 0,
       product.image
     ], function (err) {
       if (err) reject(err);
@@ -245,15 +253,23 @@ ipcMain.handle('add-product', async (event, product) => {
 // Update a product
 ipcMain.handle('update-product', async (event, product) => {
   return new Promise((resolve, reject) => {
-    const stmt = db.prepare(`UPDATE products SET name=?, price=?, barcode=?, category_id=?, stock_quantity=?, min_stock_level=?, supplier_id=?, image=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`);
+    const stmt = db.prepare(`UPDATE products SET name=?, price=?, sale_price=?, discount=?, discount_type=?, barcode=?, sku=?, category_id=?, brand_id=?, product_type_id=?, stock_quantity=?, min_stock_level=?, tax=?, description=?, is_active=?, image=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`);
     stmt.run([
       product.name,
       product.price,
+      product.sale_price,
+      product.discount,
+      product.discount_type,
       product.barcode,
+      product.sku,
       product.category_id,
+      product.brand_id,
+      product.product_type_id,
       product.stock_quantity,
       product.min_stock_level,
-      product.supplier_id,
+      product.tax,
+      product.description,
+      product.is_active ? 1 : 0,
       product.image,
       product.id
     ], function (err) {
@@ -295,13 +311,20 @@ ipcMain.handle('get-stock-movements', async (event, productId) => {
 // Add a new stock movement
 ipcMain.handle('add-stock-movement', async (event, movement) => {
   return new Promise((resolve, reject) => {
-    const stmt = db.prepare(`INSERT INTO stock_movements (id, product_id, type, quantity, reason, date) VALUES (?, ?, ?, ?, ?, ?)`);
+    const stmt = db.prepare(`INSERT INTO stock_movements (id, product_id, brand_id, supplier_id, warehouse_id, type, quantity, cost, total_cost, process_number, reason, notes, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     stmt.run([
       movement.id,
       movement.product_id,
+      movement.brand_id || null,
+      movement.supplier_id || null,
+      movement.warehouse_id || 'main',
       movement.type,
       movement.quantity,
-      movement.reason,
+      movement.cost || null,
+      movement.total_cost || null,
+      movement.process_number || null,
+      movement.reason || '',
+      movement.notes || '',
       movement.date || new Date().toISOString(),
     ], function (err) {
       if (err) reject(err);
@@ -367,6 +390,162 @@ ipcMain.handle('update-category', async (event, category) => {
 ipcMain.handle('delete-category', async (event, id) => {
   return new Promise((resolve, reject) => {
     db.run('DELETE FROM categories WHERE id = ?', [id], function (err) {
+      if (err) reject(err);
+      else resolve({ success: true });
+    });
+  });
+});
+
+// --- BRANDS CRUD IPC HANDLERS ---
+
+// Get all brands
+ipcMain.handle('get-brands', async () => {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM brands', (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+});
+
+// Add a new brand
+ipcMain.handle('add-brand', async (event, brand) => {
+  return new Promise((resolve, reject) => {
+    const stmt = db.prepare(`INSERT INTO brands (id, name, description) VALUES (?, ?, ?)`);
+    stmt.run([
+      brand.id,
+      brand.name,
+      brand.description || '',
+    ], function (err) {
+      if (err) reject(err);
+      else resolve({ success: true, id: brand.id });
+    });
+    stmt.finalize();
+  });
+});
+
+// Update a brand
+ipcMain.handle('update-brand', async (event, brand) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE brands SET name = ?, description = ? WHERE id = ?`,
+      [brand.name, brand.description || '', brand.id],
+      function (err) {
+        if (err) reject(err);
+        else resolve({ success: true });
+      }
+    );
+  });
+});
+
+// Delete a brand by id
+ipcMain.handle('delete-brand', async (event, id) => {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM brands WHERE id = ?', [id], function (err) {
+      if (err) reject(err);
+      else resolve({ success: true });
+    });
+  });
+});
+
+// --- PRODUCT TYPES CRUD IPC HANDLERS ---
+
+// Get all product types
+ipcMain.handle('get-product-types', async () => {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM product_types', (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+});
+
+// Add a new product type
+ipcMain.handle('add-product-type', async (event, type) => {
+  return new Promise((resolve, reject) => {
+    const stmt = db.prepare(`INSERT INTO product_types (id, name, description) VALUES (?, ?, ?)`);
+    stmt.run([
+      type.id,
+      type.name,
+      type.description || '',
+    ], function (err) {
+      if (err) reject(err);
+      else resolve({ success: true, id: type.id });
+    });
+    stmt.finalize();
+  });
+});
+
+// Update a product type
+ipcMain.handle('update-product-type', async (event, type) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE product_types SET name = ?, description = ? WHERE id = ?`,
+      [type.name, type.description || '', type.id],
+      function (err) {
+        if (err) reject(err);
+        else resolve({ success: true });
+      }
+    );
+  });
+});
+
+// Delete a product type by id
+ipcMain.handle('delete-product-type', async (event, id) => {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM product_types WHERE id = ?', [id], function (err) {
+      if (err) reject(err);
+      else resolve({ success: true });
+    });
+  });
+});
+
+// --- WAREHOUSES CRUD IPC HANDLERS ---
+
+// Get all warehouses
+ipcMain.handle('get-warehouses', async () => {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM warehouses', (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+});
+
+// Add a new warehouse
+ipcMain.handle('add-warehouse', async (event, warehouse) => {
+  return new Promise((resolve, reject) => {
+    const stmt = db.prepare(`INSERT INTO warehouses (id, name, description) VALUES (?, ?, ?)`);
+    stmt.run([
+      warehouse.id,
+      warehouse.name,
+      warehouse.description || '',
+    ], function (err) {
+      if (err) reject(err);
+      else resolve({ success: true, id: warehouse.id });
+    });
+    stmt.finalize();
+  });
+});
+
+// Update a warehouse
+ipcMain.handle('update-warehouse', async (event, warehouse) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE warehouses SET name = ?, description = ? WHERE id = ?`,
+      [warehouse.name, warehouse.description || '', warehouse.id],
+      function (err) {
+        if (err) reject(err);
+        else resolve({ success: true });
+      }
+    );
+  });
+});
+
+// Delete a warehouse by id
+ipcMain.handle('delete-warehouse', async (event, id) => {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM warehouses WHERE id = ?', [id], function (err) {
       if (err) reject(err);
       else resolve({ success: true });
     });
@@ -562,5 +741,112 @@ ipcMain.handle('get-top-products', async (event, { startDate, endDate, limit = 5
         else resolve(rows);
       }
     );
+  });
+});
+
+// --- SUPPLIERS CRUD IPC HANDLERS ---
+
+// Get all suppliers (with phones as array)
+ipcMain.handle('get-suppliers', async () => {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM suppliers', async (err, suppliers) => {
+      if (err) return reject(err);
+      // For each supplier, fetch phones
+      const getPhones = (supplierId) => new Promise((res, rej) => {
+        db.all('SELECT phone FROM supplier_phones WHERE supplier_id = ?', [supplierId], (err, rows) => {
+          if (err) rej(err);
+          else res(rows.map(r => r.phone));
+        });
+      });
+      const suppliersWithPhones = await Promise.all(
+        suppliers.map(async (s) => ({
+          ...s,
+          phones: await getPhones(s.id),
+        }))
+      );
+      resolve(suppliersWithPhones);
+    });
+  });
+});
+
+// Add a new supplier (with phones)
+ipcMain.handle('add-supplier', async (event, supplier) => {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      const stmt = db.prepare(`INSERT INTO suppliers (id, name, contact, email, address, company, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+      stmt.run([
+        supplier.id,
+        supplier.name,
+        '', // contact (legacy, not used)
+        supplier.email || '',
+        supplier.address || '',
+        supplier.company || '',
+        supplier.notes || '',
+        new Date().toISOString(),
+      ], function (err) {
+        if (err) return reject(err);
+        // Insert phones
+        if (Array.isArray(supplier.phones)) {
+          const phoneStmt = db.prepare('INSERT INTO supplier_phones (id, supplier_id, phone) VALUES (?, ?, ?)');
+          supplier.phones.forEach(phone => {
+            phoneStmt.run([
+              Math.random().toString(36).substr(2, 9),
+              supplier.id,
+              phone,
+            ]);
+          });
+          phoneStmt.finalize();
+        }
+        resolve({ success: true, id: supplier.id });
+      });
+      stmt.finalize();
+    });
+  });
+});
+
+// Update a supplier (and phones)
+ipcMain.handle('update-supplier', async (event, supplier) => {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(
+        `UPDATE suppliers SET name = ?, email = ?, address = ?, company = ?, notes = ? WHERE id = ?`,
+        [supplier.name, supplier.email || '', supplier.address || '', supplier.company || '', supplier.notes || '', supplier.id],
+        function (err) {
+          if (err) return reject(err);
+          // Remove old phones
+          db.run('DELETE FROM supplier_phones WHERE supplier_id = ?', [supplier.id], function (err2) {
+            if (err2) return reject(err2);
+            // Insert new phones
+            if (Array.isArray(supplier.phones)) {
+              const phoneStmt = db.prepare('INSERT INTO supplier_phones (id, supplier_id, phone) VALUES (?, ?, ?)');
+              supplier.phones.forEach(phone => {
+                phoneStmt.run([
+                  Math.random().toString(36).substr(2, 9),
+                  supplier.id,
+                  phone,
+                ]);
+              });
+              phoneStmt.finalize();
+            }
+            resolve({ success: true });
+          });
+        }
+      );
+    });
+  });
+});
+
+// Delete a supplier (and their phones)
+ipcMain.handle('delete-supplier', async (event, id) => {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run('DELETE FROM supplier_phones WHERE supplier_id = ?', [id], function (err) {
+        if (err) return reject(err);
+        db.run('DELETE FROM suppliers WHERE id = ?', [id], function (err2) {
+          if (err2) return reject(err2);
+          resolve({ success: true });
+        });
+      });
+    });
   });
 });

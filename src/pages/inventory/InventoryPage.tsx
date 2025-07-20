@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -70,6 +71,29 @@ interface NewStockData {
   notes: string;
 }
 
+// Add warehouse/location support
+interface Warehouse {
+  id: string;
+  name: string;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+}
+
+interface Brand {
+  id: string;
+  name: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  brand_id: string;
+  category_id: string;
+}
+
 const InventoryPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -90,15 +114,37 @@ const InventoryPage = () => {
   const [categories, setCategories] = useState<any[]>(['all']); // DB categories
   const [stockMovements, setStockMovements] = useState<any[]>([]);
 
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([{ id: 'main', name: 'Main' }]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+
+  const [selectedBrand, setSelectedBrand] = useState<string>('');
+  const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [selectedSupplier, setSelectedSupplier] = useState<string>('');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('main');
+
+  const [cost, setCost] = useState('');
+  const [processNumber, setProcessNumber] = useState('');
+  const [dateTime, setDateTime] = useState('');
+  const [totalCost, setTotalCost] = useState('');
+
   // Fetch products, categories, and stock movements from DB
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const dbProducts = (window as any).electronAPI?.getProducts ? await (window as any).electronAPI.getProducts() : [];
+        const dbProducts = window.electronAPI?.getProducts ? await window.electronAPI.getProducts() : [];
+        setAllProducts(dbProducts);
         setProducts(dbProducts);
-        const dbCategories = (window as any).electronAPI?.getCategories ? await (window as any).electronAPI.getCategories() : [];
+        const dbCategories = window.electronAPI?.getCategories ? await window.electronAPI.getCategories() : [];
         setCategories(['all', ...dbCategories.map((cat: any) => cat.name)]);
-        const dbStockMovements = (window as any).electronAPI?.getStockMovements ? await (window as any).electronAPI.getStockMovements() : [];
+        const dbBrands = window.electronAPI?.getBrands ? await window.electronAPI.getBrands() : [];
+        setBrands(dbBrands);
+        const dbSuppliers = window.electronAPI?.getSuppliers ? await window.electronAPI.getSuppliers() : [];
+        setSuppliers(dbSuppliers);
+        const dbWarehouses = window.electronAPI?.getWarehouses ? await window.electronAPI.getWarehouses() : [];
+        setWarehouses([{ id: 'main', name: 'Main' }, ...dbWarehouses]);
+        const dbStockMovements = window.electronAPI?.getStockMovements ? await window.electronAPI.getStockMovements() : [];
         setStockMovements(dbStockMovements);
       } catch (err) {
         // handle error
@@ -240,10 +286,22 @@ const InventoryPage = () => {
       supplier: '',
       notes: '',
     });
+    setSelectedBrand('');
+    setSelectedProduct('');
+    setSelectedSupplier('');
+    setSelectedWarehouse('main');
+    setCost('');
+    setProcessNumber(`INV-${Date.now().toString(36).toUpperCase()}`);
+    setDateTime(new Date().toISOString().slice(0, 16));
+    setTotalCost('');
   };
 
-  const handleAddStockSubmit = () => {
-    if (!newStockData.name || !newStockData.category || !newStockData.quantity || !newStockData.supplier) {
+  const handleQuantityOrCostChange = (quantity: string, costValue: string) => {
+    setTotalCost((parseFloat(quantity) || 0) * (parseFloat(costValue) || 0) + '');
+  };
+
+  const handleAddStockSubmit = async () => {
+    if (!selectedProduct || !selectedBrand || !selectedSupplier || !newStockData.category || !newStockData.quantity || !cost) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
@@ -251,22 +309,44 @@ const InventoryPage = () => {
       });
       return;
     }
-
-    // In a real app, this would update the database
-    toast({
-      title: 'Stock Added',
-      description: `Added ${newStockData.quantity} units of ${newStockData.name} to inventory`,
-    });
-
-    setOpenAddDialog(false);
-    setNewStockData({
-      name: '',
-      category: '',
-      barcode: '',
-      quantity: '',
-      supplier: '',
-      notes: '',
-    });
+    try {
+      const movement = {
+        id: generateId(),
+        product_id: selectedProduct,
+        brand_id: selectedBrand,
+        supplier_id: selectedSupplier,
+        warehouse_id: selectedWarehouse,
+        type: 'in',
+        quantity: parseInt(newStockData.quantity),
+        cost: parseFloat(cost),
+        total_cost: parseFloat(totalCost) || (parseInt(newStockData.quantity) * parseFloat(cost)),
+        process_number: processNumber,
+        reason: 'Stock In',
+        notes: newStockData.notes,
+        date: dateTime || new Date().toISOString(),
+      };
+      await window.electronAPI.addStockMovement(movement);
+      toast({
+        title: 'Inventory Process Added',
+        description: `Added ${newStockData.quantity} units of product.`
+      });
+      setOpenAddDialog(false);
+      setNewStockData({
+        name: '',
+        category: '',
+        barcode: '',
+        quantity: '',
+        supplier: '',
+        notes: '',
+      });
+      // Refresh stock movements and products
+      const dbStockMovements = window.electronAPI?.getStockMovements ? await window.electronAPI.getStockMovements() : [];
+      setStockMovements(dbStockMovements);
+      const dbProducts = window.electronAPI?.getProducts ? await window.electronAPI.getProducts() : [];
+      setProducts(dbProducts);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to add inventory process', variant: 'destructive' });
+    }
   };
 
   const getStatusBadge = (status: InventoryItem['status']) => {
@@ -556,91 +636,175 @@ const InventoryPage = () => {
 
       {/* Add Stock Dialog */}
       <Dialog open={openAddDialog} onOpenChange={setOpenAddDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl w-full">
           <DialogHeader>
-            <DialogTitle>Add New Stock</DialogTitle>
+            <DialogTitle>Add Inventory Process</DialogTitle>
             <DialogDescription>
-              Enter the details for the new inventory item
+              Enter the details for the new inventory process
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Name *</label>
-              <Input
-                value={newStockData.name}
-                onChange={(e) => setNewStockData({ ...newStockData, name: e.target.value })}
-                placeholder="Product name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Category *</label>
-              <Select
-                value={newStockData.category}
-                onValueChange={(value) => setNewStockData({ ...newStockData, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories
-                    .filter(cat => cat !== 'all')
-                    .map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
+          <form>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Category *</label>
+                <Select
+                  value={newStockData.category}
+                  onValueChange={(value) => {
+                    setNewStockData({ ...newStockData, category: value });
+                    setSelectedBrand('');
+                    setSelectedProduct('');
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories
+                      .filter(cat => cat !== 'all')
+                      .map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Brand *</label>
+                <Select
+                  value={selectedBrand}
+                  onValueChange={(value) => {
+                    setSelectedBrand(value);
+                    setSelectedProduct('');
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map((brand) => (
+                      <SelectItem key={brand.id} value={brand.id}>
+                        {brand.name}
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Product *</label>
+                <Select
+                  value={selectedProduct}
+                  onValueChange={(value) => setSelectedProduct(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allProducts
+                      .filter(p =>
+                        (!newStockData.category || p.category_id === newStockData.category) &&
+                        (!selectedBrand || p.brand_id === selectedBrand)
+                      )
+                      .map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Supplier *</label>
+                <Select
+                  value={selectedSupplier}
+                  onValueChange={setSelectedSupplier}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Quantity *</label>
+                <Input
+                  type="number"
+                  value={newStockData.quantity}
+                  onChange={(e) => {
+                    setNewStockData({ ...newStockData, quantity: e.target.value });
+                    handleQuantityOrCostChange(e.target.value, cost);
+                  }}
+                  placeholder="Enter quantity"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cost (Item Price) *</label>
+                <Input
+                  type="number"
+                  value={cost}
+                  onChange={(e) => {
+                    setCost(e.target.value);
+                    handleQuantityOrCostChange(newStockData.quantity, e.target.value);
+                  }}
+                  placeholder="Enter item price"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Warehouse/Location</label>
+                <Select
+                  value={selectedWarehouse}
+                  onValueChange={setSelectedWarehouse}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select warehouse/location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 col-span-2">
+                <label className="text-sm font-medium">Notes</label>
+                <Textarea
+                  value={newStockData.notes}
+                  onChange={(e) => setNewStockData({ ...newStockData, notes: e.target.value })}
+                  placeholder="Additional notes (optional)"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4 col-span-2">
+                <div>
+                  <label className="text-sm font-medium">Process Number</label>
+                  <Input value={processNumber} readOnly />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Date/Time</label>
+                  <Input value={dateTime} readOnly />
+                </div>
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium">Total Cost</label>
+                <Input value={totalCost} readOnly />
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Barcode</label>
-              <Input
-                value={newStockData.barcode}
-                onChange={(e) => setNewStockData({ ...newStockData, barcode: e.target.value })}
-                placeholder="Product barcode"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Quantity *</label>
-              <Input
-                type="number"
-                value={newStockData.quantity}
-                onChange={(e) => setNewStockData({ ...newStockData, quantity: e.target.value })}
-                placeholder="Initial stock quantity"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Supplier *</label>
-              <Input
-                value={newStockData.supplier}
-                onChange={(e) => setNewStockData({ ...newStockData, supplier: e.target.value })}
-                placeholder="Supplier name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Notes</label>
-              <Input
-                value={newStockData.notes}
-                onChange={(e) => setNewStockData({ ...newStockData, notes: e.target.value })}
-                placeholder="Additional notes"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenAddDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddStockSubmit}>
-              Add Stock
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenAddDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddStockSubmit}>
+                Add Inventory
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

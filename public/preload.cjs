@@ -26,6 +26,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateProduct: (product) => ipcRenderer.invoke('update-product', product),
   deleteProduct: (id) => ipcRenderer.invoke('delete-product', id),
 
+  // --- PRODUCT TYPES CRUD ---
+  getProductTypes: () => ipcRenderer.invoke('get-product-types'),
+  addProductType: (type) => ipcRenderer.invoke('add-product-type', type),
+  updateProductType: (type) => ipcRenderer.invoke('update-product-type', type),
+  deleteProductType: (id) => ipcRenderer.invoke('delete-product-type', id),
+
   // --- STOCK MOVEMENTS CRUD ---
   getStockMovements: (productId) => ipcRenderer.invoke('get-stock-movements', productId),
   addStockMovement: (movement) => ipcRenderer.invoke('add-stock-movement', movement),
@@ -54,4 +60,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSalesByDay: (params) => ipcRenderer.invoke('get-sales-by-day', params),
   getSalesByCategory: (params) => ipcRenderer.invoke('get-sales-by-category', params),
   getTopProducts: (params) => ipcRenderer.invoke('get-top-products', params),
+
+  // --- BRANDS CRUD ---
+  getBrands: () => ipcRenderer.invoke('get-brands'),
+  addBrand: (brand) => ipcRenderer.invoke('add-brand', brand),
+  updateBrand: (brand) => ipcRenderer.invoke('update-brand', brand),
+  deleteBrand: (id) => ipcRenderer.invoke('delete-brand', id),
+
+  // --- WAREHOUSES CRUD ---
+  getWarehouses: () => ipcRenderer.invoke('get-warehouses'),
+  addWarehouse: (warehouse) => ipcRenderer.invoke('add-warehouse', warehouse),
+  updateWarehouse: (warehouse) => ipcRenderer.invoke('update-warehouse', warehouse),
+  deleteWarehouse: (id) => ipcRenderer.invoke('delete-warehouse', id),
+
+  // --- SUPPLIERS CRUD ---
+  getSuppliers: () => ipcRenderer.invoke('get-suppliers'),
+  addSupplier: (supplier) => ipcRenderer.invoke('add-supplier', supplier),
+  updateSupplier: (supplier) => ipcRenderer.invoke('update-supplier', supplier),
+  deleteSupplier: (id) => ipcRenderer.invoke('delete-supplier', id),
 });

@@ -18,6 +18,7 @@ import ReportsPage from '@/pages/reports/ReportsPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import UsersPage from '@/pages/users/UsersPage';
 import InvoicesPage from '@/pages/invoices/InvoicesPage';
+import SuppliersPage from '@/pages/suppliers/SuppliersPage';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -72,6 +73,10 @@ function AppRoutes() {
         {
           path: 'settings',
           element: <SettingsPage />,
+        },
+        {
+          path: 'suppliers',
+          element: <SuppliersPage />,
         },
       ],
     },

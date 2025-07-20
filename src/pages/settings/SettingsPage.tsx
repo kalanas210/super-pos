@@ -38,6 +38,9 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryManagement } from '@/components/CategoryManagement';
+import { BrandManagement } from '@/components/BrandManagement';
+import { ProductTypeManagement } from '@/components/ProductTypeManagement';
+import { WarehouseManagement } from '@/components/WarehouseManagement';
 
 const currencies = [
   { code: 'LKR', name: 'Sri Lankan Rupee', symbol: 'Rs.' },
@@ -187,6 +190,9 @@ const SettingsPage = () => {
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="brands">Brands</TabsTrigger>
+          <TabsTrigger value="product-types">Product Types</TabsTrigger>
+          <TabsTrigger value="warehouses">Warehouses</TabsTrigger>
           <TabsTrigger value="printing">Printing</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="sync">Sync & Backup</TabsTrigger>
@@ -426,6 +432,48 @@ const SettingsPage = () => {
             </CardHeader>
             <CardContent>
               <CategoryManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="brands">
+          <Card>
+            <CardHeader>
+              <CardTitle>Brands</CardTitle>
+              <CardDescription>
+                Manage product brands for your inventory
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BrandManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="product-types">
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Types</CardTitle>
+              <CardDescription>
+                Manage product types (units, kg, meter, packet, bottle, etc.)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ProductTypeManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="warehouses">
+          <Card>
+            <CardHeader>
+              <CardTitle>Warehouses / Locations</CardTitle>
+              <CardDescription>
+                Manage warehouses or locations for your inventory
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WarehouseManagement />
             </CardContent>
           </Card>
         </TabsContent>

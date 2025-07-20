@@ -20,68 +20,68 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
-interface Category {
+interface Warehouse {
   id: string;
   name: string;
-  description: string;
+  description?: string;
 }
 
 declare global {
   interface Window {
     electronAPI?: {
-      getCategories: () => Promise<Category[]>;
-      addCategory: (category: Category) => Promise<{ success: boolean; id: string }>;
-      updateCategory: (category: Category) => Promise<{ success: boolean }>;
-      deleteCategory: (id: string) => Promise<{ success: boolean }>;
+      getWarehouses: () => Promise<Warehouse[]>;
+      addWarehouse: (warehouse: Warehouse) => Promise<{ success: boolean; id: string }>;
+      updateWarehouse: (warehouse: Warehouse) => Promise<{ success: boolean }>;
+      deleteWarehouse: (id: string) => Promise<{ success: boolean }>;
     };
   }
 }
 
-export const CategoryManagement = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
+export const WarehouseManagement = () => {
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchCategories();
+    fetchWarehouses();
   }, []);
 
-  const fetchCategories = async () => {
-    if (window.electronAPI?.getCategories) {
+  const fetchWarehouses = async () => {
+    if (window.electronAPI?.getWarehouses) {
       try {
-        const data = await window.electronAPI.getCategories();
-        setCategories(data);
+        const data = await window.electronAPI.getWarehouses();
+        setWarehouses(data);
       } catch (err) {
-        toast({ title: 'Error', description: 'Failed to load categories', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Failed to load warehouses', variant: 'destructive' });
       }
     }
   };
 
-  const handleAddCategory = () => {
-    setEditingCategory(null);
+  const handleAddWarehouse = () => {
+    setEditingWarehouse(null);
     setFormData({ name: '', description: '' });
     setOpenDialog(true);
   };
 
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory(category);
-    setFormData({ name: category.name, description: category.description });
+  const handleEditWarehouse = (warehouse: Warehouse) => {
+    setEditingWarehouse(warehouse);
+    setFormData({ name: warehouse.name, description: warehouse.description || '' });
     setOpenDialog(true);
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (window.electronAPI?.deleteCategory) {
+  const handleDeleteWarehouse = async (warehouseId: string) => {
+    if (window.electronAPI?.deleteWarehouse) {
       try {
-        await window.electronAPI.deleteCategory(categoryId);
-        setCategories(categories.filter(cat => cat.id !== categoryId));
+        await window.electronAPI.deleteWarehouse(warehouseId);
+        setWarehouses(warehouses.filter(w => w.id !== warehouseId));
         toast({
-          title: 'Category Deleted',
-          description: 'The category has been deleted successfully',
+          title: 'Warehouse Deleted',
+          description: 'The warehouse/location has been deleted successfully',
         });
       } catch (err) {
-        toast({ title: 'Error', description: 'Failed to delete category', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Failed to delete warehouse', variant: 'destructive' });
       }
     }
   };
@@ -90,42 +90,42 @@ export const CategoryManagement = () => {
     if (!formData.name.trim()) {
       toast({
         title: 'Error',
-        description: 'Category name is required',
+        description: 'Warehouse/location name is required',
         variant: 'destructive',
       });
       return;
     }
 
-    if (editingCategory) {
-      if (window.electronAPI?.updateCategory) {
+    if (editingWarehouse) {
+      if (window.electronAPI?.updateWarehouse) {
         try {
-          await window.electronAPI.updateCategory({ ...editingCategory, ...formData });
-          setCategories(categories.map(cat =>
-            cat.id === editingCategory.id ? { ...cat, ...formData } : cat
+          await window.electronAPI.updateWarehouse({ ...editingWarehouse, ...formData });
+          setWarehouses(warehouses.map(w =>
+            w.id === editingWarehouse.id ? { ...w, ...formData } : w
           ));
           toast({
-            title: 'Category Updated',
-            description: 'The category has been updated successfully',
+            title: 'Warehouse Updated',
+            description: 'The warehouse/location has been updated successfully',
           });
         } catch (err) {
-          toast({ title: 'Error', description: 'Failed to update category', variant: 'destructive' });
+          toast({ title: 'Error', description: 'Failed to update warehouse', variant: 'destructive' });
         }
       }
     } else {
-      if (window.electronAPI?.addCategory) {
+      if (window.electronAPI?.addWarehouse) {
         try {
-          const newCategory: Category = {
+          const newWarehouse: Warehouse = {
             id: Math.random().toString(36).substr(2, 9),
             ...formData,
           };
-          await window.electronAPI.addCategory(newCategory);
-          setCategories([...categories, newCategory]);
+          await window.electronAPI.addWarehouse(newWarehouse);
+          setWarehouses([...warehouses, newWarehouse]);
           toast({
-            title: 'Category Added',
-            description: 'The new category has been added successfully',
+            title: 'Warehouse Added',
+            description: 'The new warehouse/location has been added successfully',
           });
         } catch (err) {
-          toast({ title: 'Error', description: 'Failed to add category', variant: 'destructive' });
+          toast({ title: 'Error', description: 'Failed to add warehouse', variant: 'destructive' });
         }
       }
     }
@@ -137,10 +137,10 @@ export const CategoryManagement = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Category Management</h2>
-        <Button onClick={handleAddCategory}>
+        <h2 className="text-2xl font-bold">Warehouse/Location Management</h2>
+        <Button onClick={handleAddWarehouse}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Category
+          Add Warehouse/Location
         </Button>
       </div>
 
@@ -153,23 +153,23 @@ export const CategoryManagement = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {categories.map((category) => (
-            <TableRow key={category.id}>
-              <TableCell>{category.name}</TableCell>
-              <TableCell>{category.description}</TableCell>
+          {warehouses.map((warehouse) => (
+            <TableRow key={warehouse.id}>
+              <TableCell>{warehouse.name}</TableCell>
+              <TableCell>{warehouse.description}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleEditCategory(category)}
+                    onClick={() => handleEditWarehouse(warehouse)}
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeleteCategory(category.id)}
+                    onClick={() => handleDeleteWarehouse(warehouse.id)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -184,12 +184,12 @@ export const CategoryManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingCategory ? 'Edit Category' : 'Add New Category'}
+              {editingWarehouse ? 'Edit Warehouse/Location' : 'Add New Warehouse/Location'}
             </DialogTitle>
             <DialogDescription>
-              {editingCategory
-                ? 'Edit the category details below'
-                : 'Enter the details for the new category'}
+              {editingWarehouse
+                ? 'Edit the warehouse/location details below'
+                : 'Enter the details for the new warehouse/location'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -200,7 +200,7 @@ export const CategoryManagement = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="Category name"
+                placeholder="Warehouse/location name"
               />
             </div>
             <div>
@@ -210,7 +210,7 @@ export const CategoryManagement = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Category description"
+                placeholder="Warehouse/location description"
               />
             </div>
           </div>
@@ -219,7 +219,7 @@ export const CategoryManagement = () => {
               Cancel
             </Button>
             <Button onClick={handleSubmit}>
-              {editingCategory ? 'Update' : 'Add'} Category
+              {editingWarehouse ? 'Update' : 'Add'} Warehouse/Location
             </Button>
           </DialogFooter>
         </DialogContent>

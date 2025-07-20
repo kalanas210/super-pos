@@ -20,68 +20,68 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
-interface Category {
+interface ProductType {
   id: string;
   name: string;
-  description: string;
+  description?: string;
 }
 
 declare global {
   interface Window {
     electronAPI?: {
-      getCategories: () => Promise<Category[]>;
-      addCategory: (category: Category) => Promise<{ success: boolean; id: string }>;
-      updateCategory: (category: Category) => Promise<{ success: boolean }>;
-      deleteCategory: (id: string) => Promise<{ success: boolean }>;
+      getProductTypes: () => Promise<ProductType[]>;
+      addProductType: (type: ProductType) => Promise<{ success: boolean; id: string }>;
+      updateProductType: (type: ProductType) => Promise<{ success: boolean }>;
+      deleteProductType: (id: string) => Promise<{ success: boolean }>;
     };
   }
 }
 
-export const CategoryManagement = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
+export const ProductTypeManagement = () => {
+  const [types, setTypes] = useState<ProductType[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingType, setEditingType] = useState<ProductType | null>(null);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchCategories();
+    fetchTypes();
   }, []);
 
-  const fetchCategories = async () => {
-    if (window.electronAPI?.getCategories) {
+  const fetchTypes = async () => {
+    if (window.electronAPI?.getProductTypes) {
       try {
-        const data = await window.electronAPI.getCategories();
-        setCategories(data);
+        const data = await window.electronAPI.getProductTypes();
+        setTypes(data);
       } catch (err) {
-        toast({ title: 'Error', description: 'Failed to load categories', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Failed to load product types', variant: 'destructive' });
       }
     }
   };
 
-  const handleAddCategory = () => {
-    setEditingCategory(null);
+  const handleAddType = () => {
+    setEditingType(null);
     setFormData({ name: '', description: '' });
     setOpenDialog(true);
   };
 
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory(category);
-    setFormData({ name: category.name, description: category.description });
+  const handleEditType = (type: ProductType) => {
+    setEditingType(type);
+    setFormData({ name: type.name, description: type.description || '' });
     setOpenDialog(true);
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (window.electronAPI?.deleteCategory) {
+  const handleDeleteType = async (typeId: string) => {
+    if (window.electronAPI?.deleteProductType) {
       try {
-        await window.electronAPI.deleteCategory(categoryId);
-        setCategories(categories.filter(cat => cat.id !== categoryId));
+        await window.electronAPI.deleteProductType(typeId);
+        setTypes(types.filter(t => t.id !== typeId));
         toast({
-          title: 'Category Deleted',
-          description: 'The category has been deleted successfully',
+          title: 'Product Type Deleted',
+          description: 'The product type has been deleted successfully',
         });
       } catch (err) {
-        toast({ title: 'Error', description: 'Failed to delete category', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Failed to delete product type', variant: 'destructive' });
       }
     }
   };
@@ -90,42 +90,42 @@ export const CategoryManagement = () => {
     if (!formData.name.trim()) {
       toast({
         title: 'Error',
-        description: 'Category name is required',
+        description: 'Product type name is required',
         variant: 'destructive',
       });
       return;
     }
 
-    if (editingCategory) {
-      if (window.electronAPI?.updateCategory) {
+    if (editingType) {
+      if (window.electronAPI?.updateProductType) {
         try {
-          await window.electronAPI.updateCategory({ ...editingCategory, ...formData });
-          setCategories(categories.map(cat =>
-            cat.id === editingCategory.id ? { ...cat, ...formData } : cat
+          await window.electronAPI.updateProductType({ ...editingType, ...formData });
+          setTypes(types.map(t =>
+            t.id === editingType.id ? { ...t, ...formData } : t
           ));
           toast({
-            title: 'Category Updated',
-            description: 'The category has been updated successfully',
+            title: 'Product Type Updated',
+            description: 'The product type has been updated successfully',
           });
         } catch (err) {
-          toast({ title: 'Error', description: 'Failed to update category', variant: 'destructive' });
+          toast({ title: 'Error', description: 'Failed to update product type', variant: 'destructive' });
         }
       }
     } else {
-      if (window.electronAPI?.addCategory) {
+      if (window.electronAPI?.addProductType) {
         try {
-          const newCategory: Category = {
+          const newType: ProductType = {
             id: Math.random().toString(36).substr(2, 9),
             ...formData,
           };
-          await window.electronAPI.addCategory(newCategory);
-          setCategories([...categories, newCategory]);
+          await window.electronAPI.addProductType(newType);
+          setTypes([...types, newType]);
           toast({
-            title: 'Category Added',
-            description: 'The new category has been added successfully',
+            title: 'Product Type Added',
+            description: 'The new product type has been added successfully',
           });
         } catch (err) {
-          toast({ title: 'Error', description: 'Failed to add category', variant: 'destructive' });
+          toast({ title: 'Error', description: 'Failed to add product type', variant: 'destructive' });
         }
       }
     }
@@ -137,10 +137,10 @@ export const CategoryManagement = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Category Management</h2>
-        <Button onClick={handleAddCategory}>
+        <h2 className="text-2xl font-bold">Product Type Management</h2>
+        <Button onClick={handleAddType}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Category
+          Add Product Type
         </Button>
       </div>
 
@@ -153,23 +153,23 @@ export const CategoryManagement = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {categories.map((category) => (
-            <TableRow key={category.id}>
-              <TableCell>{category.name}</TableCell>
-              <TableCell>{category.description}</TableCell>
+          {types.map((type) => (
+            <TableRow key={type.id}>
+              <TableCell>{type.name}</TableCell>
+              <TableCell>{type.description}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleEditCategory(category)}
+                    onClick={() => handleEditType(type)}
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeleteCategory(category.id)}
+                    onClick={() => handleDeleteType(type.id)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -184,12 +184,12 @@ export const CategoryManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingCategory ? 'Edit Category' : 'Add New Category'}
+              {editingType ? 'Edit Product Type' : 'Add New Product Type'}
             </DialogTitle>
             <DialogDescription>
-              {editingCategory
-                ? 'Edit the category details below'
-                : 'Enter the details for the new category'}
+              {editingType
+                ? 'Edit the product type details below'
+                : 'Enter the details for the new product type'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -200,7 +200,7 @@ export const CategoryManagement = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="Category name"
+                placeholder="Product type name"
               />
             </div>
             <div>
@@ -210,7 +210,7 @@ export const CategoryManagement = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Category description"
+                placeholder="Product type description"
               />
             </div>
           </div>
@@ -219,7 +219,7 @@ export const CategoryManagement = () => {
               Cancel
             </Button>
             <Button onClick={handleSubmit}>
-              {editingCategory ? 'Update' : 'Add'} Category
+              {editingType ? 'Update' : 'Add'} Product Type
             </Button>
           </DialogFooter>
         </DialogContent>

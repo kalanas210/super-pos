@@ -15,7 +15,7 @@ import {
   LayoutDashboard, Store, ShoppingCart, Package, FileText, 
   BarChart3, Users, Settings, Menu, X, LogOut, ArrowUpDown,
   Moon, Sun, Bell, Calculator as CalculatorIcon, CreditCard, Printer, 
-  Database, Shield, Zap, TrendingUp, DollarSign
+  Database, Shield, Zap, TrendingUp, DollarSign, Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -180,6 +180,13 @@ const DashboardLayout = () => {
       path: '/inventory',
       permission: checkPermission('manage_inventory'),
       color: 'text-orange-600 dark:text-orange-400',
+    },
+    {
+      name: 'Suppliers',
+      icon: <Building2 className="h-5 w-5" />,
+      path: '/suppliers',
+      permission: true,
+      color: 'text-teal-600 dark:text-teal-400',
     },
     {
       name: 'Invoices',
