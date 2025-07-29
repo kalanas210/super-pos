@@ -66,16 +66,16 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  sale_price: number;
-  discount: number;
-  discount_type: 'percentage' | 'fixed';
-  barcode: string;
-  sku: string;
-  category_id: string;
-  brand_id: string;
-  product_type_id: string;
+  sale_price?: number;
+  discount?: number;
+  discount_type?: 'percentage' | 'fixed';
+  barcode?: string;
+  sku?: string;
+  category_id?: string;
+  brand_id?: string;
+  product_type_id?: string;
   stock_quantity: number;
-  min_stock_level: number;
+  min_stock_level?: number;
   // supplier_id: string; // REMOVE supplier_id
   image?: string;
   description?: string;
@@ -110,20 +110,7 @@ interface Supplier {
   company?: string;
 }
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      getProducts: () => Promise<Product[]>;
-      addProduct: (product: Product) => Promise<{ success: boolean; id: string }>;
-      updateProduct: (product: Product) => Promise<{ success: boolean }>;
-      deleteProduct: (id: string) => Promise<{ success: boolean }>;
-      getCategories: () => Promise<Category[]>;
-      getBrands: () => Promise<Brand[]>;
-      getProductTypes: () => Promise<ProductType[]>;
-      getSuppliers: () => Promise<Supplier[]>;
-    };
-  }
-}
+
 
 const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -147,7 +134,6 @@ const ProductsPage = () => {
     category_id: '',
     brand_id: '',
     product_type_id: '',
-    stock_quantity: '',
     min_stock_level: '',
     // supplier_id: '', // REMOVE supplier_id
     description: '',
@@ -232,8 +218,8 @@ const ProductsPage = () => {
   const filteredProducts = products.filter((product) => {
     const matchesSearch = 
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.barcode.includes(searchTerm) ||
-      product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+      (product.barcode && product.barcode.includes(searchTerm)) ||
+      (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
     const matchesBrand = selectedBrand === 'all' || product.brand_id === selectedBrand;
@@ -262,7 +248,6 @@ const ProductsPage = () => {
       category_id: '',
       brand_id: '',
       product_type_id: '',
-      stock_quantity: '',
       min_stock_level: '',
       // supplier_id: '', // REMOVE supplier_id
       description: '',
@@ -324,7 +309,7 @@ const ProductsPage = () => {
           category_id: formData.category_id,
           brand_id: formData.brand_id,
           product_type_id: formData.product_type_id,
-          stock_quantity: parseInt(formData.stock_quantity) || 0,
+          stock_quantity: 0, // Stock quantity will be managed through inventory
           min_stock_level: parseInt(formData.min_stock_level) || 0,
           // supplier_id: formData.supplier_id, // REMOVE supplier_id
           description: formData.description,
@@ -355,16 +340,15 @@ const ProductsPage = () => {
     setFormData({
       name: product.name,
       price: product.price.toString(),
-      sale_price: product.sale_price.toString(),
-      discount: product.discount.toString(),
-      discount_type: product.discount_type,
-      barcode: product.barcode,
-      sku: product.sku,
-      category_id: product.category_id,
-      brand_id: product.brand_id,
-      product_type_id: product.product_type_id,
-      stock_quantity: product.stock_quantity.toString(),
-      min_stock_level: product.min_stock_level.toString(),
+      sale_price: product.sale_price?.toString() || '',
+      discount: product.discount?.toString() || '',
+      discount_type: product.discount_type || 'percentage',
+      barcode: product.barcode || '',
+      sku: product.sku || '',
+      category_id: product.category_id || '',
+      brand_id: product.brand_id || '',
+      product_type_id: product.product_type_id || '',
+      min_stock_level: product.min_stock_level?.toString() || '',
       // supplier_id: product.supplier_id, // REMOVE supplier_id
       description: product.description || '',
       tax: product.tax?.toString() || '',
@@ -394,7 +378,7 @@ const ProductsPage = () => {
         const updatedProduct = { ...product, is_active: !product.is_active };
         await window.electronAPI.updateProduct(updatedProduct);
         setProducts(products.map(p => p.id === product.id ? updatedProduct : p));
-        toast({ 
+      toast({
           title: 'Status Updated', 
           description: `${product.name} is now ${updatedProduct.is_active ? 'active' : 'inactive'}` 
         });
@@ -761,20 +745,7 @@ const ProductsPage = () => {
             </div>
 
             {/* Stock Information */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="stock_quantity">Stock Quantity *</Label>
-                <Input
-                  id="stock_quantity"
-                  name="stock_quantity"
-                  type="number"
-                  value={formData.stock_quantity}
-                  onChange={handleInputChange}
-                  required
-                  min={0}
-                  placeholder="0"
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="min_stock_level">Minimum Stock Level</Label>
                 <Input
@@ -801,6 +772,9 @@ const ProductsPage = () => {
                   placeholder="0.00"
                 />
               </div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Stock quantity will be managed through the Inventory page
             </div>
 
             {/* Description */}

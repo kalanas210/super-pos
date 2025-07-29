@@ -16,19 +16,45 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.cjs')
+      preload: path.join(__dirname, 'preload.cjs'),
+      webSecurity: !isDev
     },
     icon: path.join(__dirname, 'icon.png'),
     titleBarStyle: 'default',
     show: false
   });
 
+  // Set CSP for development
+  if (isDev) {
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': ["default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws://localhost:5173 http://localhost:5173; font-src 'self' data:;"]
+        }
+      });
+    });
+  }
+
   // Load the app
   const startUrl = isDev 
     ? 'http://localhost:5173' 
     : `file://${path.join(__dirname, '../dist/index.html')}`;
   
-  mainWindow.loadURL(startUrl);
+  if (isDev) {
+    // In development, wait for the dev server to be ready
+    const loadDevServer = async () => {
+      try {
+        await mainWindow.loadURL(startUrl);
+      } catch (error) {
+        console.log('Dev server not ready, retrying in 1 second...');
+        setTimeout(loadDevServer, 1000);
+      }
+    };
+    loadDevServer();
+  } else {
+    mainWindow.loadURL(startUrl);
+  }
 
   // Show window when ready
   mainWindow.once('ready-to-show', () => {

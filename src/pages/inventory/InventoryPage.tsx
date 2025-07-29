@@ -111,7 +111,7 @@ const InventoryPage = () => {
   const { toast } = useToast();
 
   const [products, setProducts] = useState<any[]>([]); // DB products
-  const [categories, setCategories] = useState<any[]>(['all']); // DB categories
+  const [categories, setCategories] = useState<any[]>([]); // DB categories
   const [stockMovements, setStockMovements] = useState<any[]>([]);
 
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -119,10 +119,15 @@ const InventoryPage = () => {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([{ id: 'main', name: 'Main' }]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
 
+  // Cascading filter states for add stock dialog
   const [selectedBrand, setSelectedBrand] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [selectedSupplier, setSelectedSupplier] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('main');
+
+  // Filtered products based on cascading selection
+  const [filteredBrands, setFilteredBrands] = useState<Brand[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   const [cost, setCost] = useState('');
   const [processNumber, setProcessNumber] = useState('');
@@ -137,7 +142,7 @@ const InventoryPage = () => {
         setAllProducts(dbProducts);
         setProducts(dbProducts);
         const dbCategories = window.electronAPI?.getCategories ? await window.electronAPI.getCategories() : [];
-        setCategories(['all', ...dbCategories.map((cat: any) => cat.name)]);
+        setCategories(dbCategories);
         const dbBrands = window.electronAPI?.getBrands ? await window.electronAPI.getBrands() : [];
         setBrands(dbBrands);
         const dbSuppliers = window.electronAPI?.getSuppliers ? await window.electronAPI.getSuppliers() : [];
@@ -153,21 +158,58 @@ const InventoryPage = () => {
     fetchData();
   }, []);
 
-  // Convert mock products to inventory items
-  const inventoryItems: InventoryItem[] = products.map(product => ({
-    id: product.id,
-    name: product.name,
-    category: product.category,
-    stockQuantity: product.stockQuantity,
-    minStockLevel: product.minStockLevel,
-    lastRestocked: product.lastRestocked || 'N/A',
-    supplier: product.supplier || 'Default Supplier Ltd',
-    status: product.stockQuantity === 0 
-      ? 'out_of_stock' 
-      : product.stockQuantity < product.minStockLevel 
-      ? 'low_stock' 
-      : 'in_stock'
-  }));
+  // Cascading filter logic
+  useEffect(() => {
+    // Filter brands based on selected category
+    if (selectedCategory && selectedCategory !== 'all') {
+      const categoryProducts = allProducts.filter(product => product.category_id === selectedCategory);
+      const brandIds = [...new Set(categoryProducts.map(p => p.brand_id))];
+      const filteredBrands = brands.filter(brand => brandIds.includes(brand.id));
+      setFilteredBrands(filteredBrands);
+      setSelectedBrand(''); // Reset brand selection
+      setSelectedProduct(''); // Reset product selection
+    } else {
+      setFilteredBrands(brands);
+      setSelectedBrand('');
+      setSelectedProduct('');
+    }
+  }, [selectedCategory, allProducts, brands]);
+
+  // Filter products based on selected brand
+  useEffect(() => {
+    if (selectedBrand) {
+      const filteredProducts = allProducts.filter(product => 
+        product.brand_id === selectedBrand && 
+        (selectedCategory === 'all' || product.category_id === selectedCategory)
+      );
+      setFilteredProducts(filteredProducts);
+      setSelectedProduct(''); // Reset product selection
+    } else {
+      setFilteredProducts([]);
+      setSelectedProduct('');
+    }
+  }, [selectedBrand, selectedCategory, allProducts]);
+
+  // Convert products to inventory items
+  const inventoryItems: InventoryItem[] = products.map(product => {
+    const category = categories.find(cat => cat.id === product.category_id)?.name || 'Unknown';
+    const brand = brands.find(brand => brand.id === product.brand_id)?.name || 'Unknown';
+    
+    return {
+      id: product.id,
+      name: product.name,
+      category: category,
+      stockQuantity: product.stock_quantity || 0,
+      minStockLevel: product.min_stock_level || 0,
+      lastRestocked: 'N/A', // Will be updated from stock movements
+      supplier: brand, // Using brand as supplier for now
+      status: (product.stock_quantity || 0) === 0 
+        ? 'out_of_stock' 
+        : (product.stock_quantity || 0) < (product.min_stock_level || 0)
+        ? 'low_stock' 
+        : 'in_stock'
+    };
+  });
 
   // Filter inventory items based on search term and category
   const filteredItems = inventoryItems.filter((item) => {
@@ -301,7 +343,7 @@ const InventoryPage = () => {
   };
 
   const handleAddStockSubmit = async () => {
-    if (!selectedProduct || !selectedBrand || !selectedSupplier || !newStockData.category || !newStockData.quantity || !cost) {
+    if (!selectedProduct || !selectedBrand || !selectedSupplier || !selectedCategory || !newStockData.quantity || !cost) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
@@ -325,11 +367,25 @@ const InventoryPage = () => {
         notes: newStockData.notes,
         date: dateTime || new Date().toISOString(),
       };
+      
+      // Add stock movement
       await window.electronAPI.addStockMovement(movement);
+      
+      // Update product stock quantity
+      const selectedProductData = allProducts.find(p => p.id === selectedProduct);
+      if (selectedProductData) {
+        const updatedProduct = {
+          ...selectedProductData,
+          stock_quantity: (selectedProductData.stock_quantity || 0) + parseInt(newStockData.quantity)
+        };
+        await window.electronAPI.updateProduct(updatedProduct);
+      }
+      
       toast({
         title: 'Inventory Process Added',
         description: `Added ${newStockData.quantity} units of product.`
       });
+      
       setOpenAddDialog(false);
       setNewStockData({
         name: '',
@@ -339,11 +395,13 @@ const InventoryPage = () => {
         supplier: '',
         notes: '',
       });
+      
       // Refresh stock movements and products
       const dbStockMovements = window.electronAPI?.getStockMovements ? await window.electronAPI.getStockMovements() : [];
       setStockMovements(dbStockMovements);
       const dbProducts = window.electronAPI?.getProducts ? await window.electronAPI.getProducts() : [];
       setProducts(dbProducts);
+      setAllProducts(dbProducts);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to add inventory process', variant: 'destructive' });
     }
@@ -645,75 +703,71 @@ const InventoryPage = () => {
           </DialogHeader>
           <form>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Category *</label>
-                <Select
-                  value={newStockData.category}
-                  onValueChange={(value) => {
-                    setNewStockData({ ...newStockData, category: value });
-                    setSelectedBrand('');
-                    setSelectedProduct('');
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories
-                      .filter(cat => cat !== 'all')
-                      .map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Brand *</label>
-                <Select
-                  value={selectedBrand}
-                  onValueChange={(value) => {
-                    setSelectedBrand(value);
-                    setSelectedProduct('');
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select brand" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands.map((brand) => (
-                      <SelectItem key={brand.id} value={brand.id}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Product *</label>
-                <Select
-                  value={selectedProduct}
-                  onValueChange={(value) => setSelectedProduct(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allProducts
-                      .filter(p =>
-                        (!newStockData.category || p.category_id === newStockData.category) &&
-                        (!selectedBrand || p.brand_id === selectedBrand)
-                      )
-                      .map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Category *</label>
+              <Select
+                value={selectedCategory}
+                onValueChange={(value) => {
+                  setSelectedCategory(value);
+                  setSelectedBrand('');
+                  setSelectedProduct('');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Brand *</label>
+              <Select
+                value={selectedBrand}
+                onValueChange={(value) => {
+                  setSelectedBrand(value);
+                  setSelectedProduct('');
+                }}
+                disabled={!selectedCategory || selectedCategory === 'all'}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedCategory === 'all' ? 'Select category first' : 'Select brand'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredBrands.map((brand) => (
+                    <SelectItem key={brand.id} value={brand.id}>
+                      {brand.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Product *</label>
+              <Select
+                value={selectedProduct}
+                onValueChange={(value) => setSelectedProduct(value)}
+                disabled={!selectedBrand}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={!selectedBrand ? 'Select brand first' : 'Select product'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredProducts.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
                 <label className="text-sm font-medium">Supplier *</label>
                 <Select
                   value={selectedSupplier}
@@ -730,22 +784,22 @@ const InventoryPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Quantity *</label>
-                <Input
-                  type="number"
-                  value={newStockData.quantity}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Quantity *</label>
+              <Input
+                type="number"
+                value={newStockData.quantity}
                   onChange={(e) => {
                     setNewStockData({ ...newStockData, quantity: e.target.value });
                     handleQuantityOrCostChange(e.target.value, cost);
                   }}
                   placeholder="Enter quantity"
-                />
-              </div>
-              <div className="space-y-2">
+              />
+            </div>
+            <div className="space-y-2">
                 <label className="text-sm font-medium">Cost (Item Price) *</label>
-                <Input
+              <Input
                   type="number"
                   value={cost}
                   onChange={(e) => {
@@ -753,9 +807,9 @@ const InventoryPage = () => {
                     handleQuantityOrCostChange(newStockData.quantity, e.target.value);
                   }}
                   placeholder="Enter item price"
-                />
-              </div>
-              <div className="space-y-2">
+              />
+            </div>
+            <div className="space-y-2">
                 <label className="text-sm font-medium">Warehouse/Location</label>
                 <Select
                   value={selectedWarehouse}
@@ -774,12 +828,12 @@ const InventoryPage = () => {
                 </Select>
               </div>
               <div className="space-y-2 col-span-2">
-                <label className="text-sm font-medium">Notes</label>
+              <label className="text-sm font-medium">Notes</label>
                 <Textarea
-                  value={newStockData.notes}
-                  onChange={(e) => setNewStockData({ ...newStockData, notes: e.target.value })}
+                value={newStockData.notes}
+                onChange={(e) => setNewStockData({ ...newStockData, notes: e.target.value })}
                   placeholder="Additional notes (optional)"
-                />
+              />
               </div>
               <div className="grid grid-cols-2 gap-4 col-span-2">
                 <div>
@@ -796,14 +850,14 @@ const InventoryPage = () => {
                 <Input value={totalCost} readOnly />
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOpenAddDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddStockSubmit}>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenAddDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddStockSubmit}>
                 Add Inventory
-              </Button>
-            </DialogFooter>
+            </Button>
+          </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

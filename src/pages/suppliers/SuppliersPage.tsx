@@ -37,17 +37,6 @@ interface Supplier {
   notes?: string;
 }
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      getSuppliers: () => Promise<Supplier[]>;
-      addSupplier: (supplier: Supplier) => Promise<{ success: boolean; id: string }>;
-      updateSupplier: (supplier: Supplier) => Promise<{ success: boolean }>;
-      deleteSupplier: (id: string) => Promise<{ success: boolean }>;
-    };
-  }
-}
-
 const emptySupplier = {
   name: '',
   phones: [''],
@@ -87,7 +76,14 @@ const SuppliersPage = () => {
 
   const handleEditSupplier = (supplier: Supplier) => {
     setEditingSupplier(supplier);
-    setFormData({ ...supplier, phones: [...supplier.phones] });
+    setFormData({ 
+      name: supplier.name,
+      phones: [...supplier.phones],
+      company: supplier.company || '',
+      email: supplier.email || '',
+      address: supplier.address || '',
+      notes: supplier.notes || ''
+    });
     setOpenDialog(true);
   };
 
